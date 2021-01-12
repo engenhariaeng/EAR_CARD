@@ -40,9 +40,10 @@ boolean replaceMaster = false;
 uint8_t successRead;    // Inteiro variável para manter se tivermos uma leitura bem-sucedida do Reader
 
 byte storedCard[4];   // Armazena uma ID lida da EEPROM
-byte readCard[4];   // Armazena a identificação digitalizada do módulo RFID
+String tagCard = "";
+String masterGeral = "3B 1F 89 03";
+String masterHs = "76 D8 AD 1F";
 
-byte masterCard[4];   // Armazena o ID da placa principal lido na EEPROM
 // Crie a instância MFRC522.
 constexpr uint8_t RST_PIN = 9;     // Configurável, veja o layout típico de pinos acima
 constexpr uint8_t SS_PIN = 10;     // Configurável, veja o layout típico de pinos acima
@@ -84,7 +85,7 @@ void loop () {
     }
     while (!successRead);
   if (programMode) {
-    if ( isMaster(readCard) ) { //Quando no modo de programa verificar primeiro Se o cartão mestre for digitalizado novamente para sair do modo de programa
+    if ( isMaster(tagCard) ) { //Quando no modo de programa verificar primeiro Se o cartão mestre for digitalizado novamente para sair do modo de programa
       Serial.println(F("Master Card Scanned"));
       Serial.println(F("Exiting Program Mode"));
       Serial.println(F("-----------------------------"));
@@ -92,22 +93,22 @@ void loop () {
       return;
     }
     else {
-      if ( findID(readCard) ) { // Se o cartão digitalizado for conhecido, exclua-o
+      if ( findID(tagCard) ) { // Se o cartão digitalizado for conhecido, exclua-o
         Serial.println(F("I know this PICC, removing..."));
-        deleteID(readCard);
+        deleteID(tagCard);
         Serial.println("-----------------------------");
         Serial.println(F("Scan a PICC to ADD or REMOVE to EEPROM"));
       }
       else {                    // Se o cartão digitalizado não for conhecido, adicione-o
         Serial.println(F("I do not know this PICC, adding..."));
-        writeID(readCard);
+        writeID(tagCard);
         Serial.println(F("-----------------------------"));
         Serial.println(F("Scan a PICC to ADD or REMOVE to EEPROM"));
       }
     }
   }
   else {
-    if ( isMaster(readCard)) {    // Se o ID do cartão digitalizado corresponder ao ID da placa principal - entre no modo de programa
+    if ( isMaster(tagCard)) {    // Se o ID do cartão digitalizado corresponder ao ID da placa principal - entre no modo de programa
       programMode = true;
       Serial.println(F("Hello Master - Entered Program Mode"));
       uint8_t count = EEPROM.read(0);   // Leia o primeiro Byte da EEPROM que
@@ -122,7 +123,7 @@ void loop () {
     }
 
     else {
-      if ( findID(readCard) ) { // Se não, veja se o cartão está na EEPROM
+      if ( findID(tagCard) ) { // Se não, veja se o cartão está na EEPROM
         Serial.println(F("Welcome, You shall pass"));
         granted(500);         // MANTENHA O NIVEL AUTO POR 5000 ms
       }
@@ -184,38 +185,17 @@ uint8_t getID() {
   /* Há PICCs Mifare que têm cuidado UID de 4 ou 7 bytes se você usar PICC de 7 bytes
    Acho que devemos assumir todos os PICC como eles têm 4 byte UID
    Até suportarmos PICCs de 7 bytes */
-  Serial.println(F("Scanned PICC's UID:"));
+   Serial.println(F("Scanned PICC's UID:"));
   for ( uint8_t i = 0; i < 4; i++) {  //
-    readCard[i] = mfrc522.uid.uidByte[i];
-    Serial.print(readCard[i], HEX);
+    Serial.print(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " ");
+    Serial.print(mfrc522.uid.uidByte[i], HEX);
+    tagCard.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " "));
+    tagCard.concat(String(mfrc522.uid.uidByte[i], HEX));
   }
+  tagCard.toUpperCase();
   Serial.println("");
   mfrc522.PICC_HaltA(); // PARAR LEITURA
   return 1;
-}
-
-void ShowReaderDetails() {
-  // Obtenha a versão do software MFRC522
-  byte v = mfrc522.PCD_ReadRegister(mfrc522.VersionReg);
-  Serial.print(F("MFRC522 Software Version: 0x"));
-  Serial.print(v, HEX);
-  if (v == 0x91)
-    Serial.print(F(" = v1.0"));
-  else if (v == 0x92)
-    Serial.print(F(" = v2.0"));
-  else
-    Serial.print(F(" (unknown),probably a chinese clone?"));
-  Serial.println("");
-  // Quando 0x00 ou 0xFF é retornado, a comunicação provavelmente falhou
-  if ((v == 0x00) || (v == 0xFF)) {
-    Serial.println(F("WARNING: Communication failure, is the MFRC522 properly connected?"));
-    Serial.println(F("SYSTEM HALTED: Check connections."));
-    // Visualize o sistema é interrompido
-    digitalWrite(greenLed, LED_OFF);  //  Certifique-se de que o LED verde esteja apagado
-    digitalWrite(blueLed, LED_OFF);   //  Certifique-se de que o LED AZUL esteja apagado
-    digitalWrite(redLed, LED_ON);   // LIGAR LED VERMELHO
-    while (true); // não vá mais longe
-  }
 }
 
 ///////////////////////////////////////// Cycle Leds (Program Mode) ///////////////////////////////////
@@ -420,8 +400,8 @@ void successDelete() {
 
 ////////////////////// Check readCard IF is masterCard   ///////////////////////////////////
 // Verifique se o ID passado é o cartão mestre de programação
-boolean isMaster( byte test[] ) {
-  if ( checkTwo( test, masterCard ) )
+boolean isMaster( String readingNow ) {
+  if ( readingNow.substring(1) == masterGeral  )
     return true;
   else
     return false;
