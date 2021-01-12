@@ -67,48 +67,15 @@ void setup() {
   mfrc522.PCD_Init();    // Inicializar Hardware MFRC522
   //Se você definir Antenna Gain to Max, aumentará a distância de leitura
   // mfrc522.PCD_SetAntennaGain(mfrc522.RxGain_max);
-
-  Serial.println(F("Access Control Example v0.1"));   // Para fins de depuração
-  ShowReaderDetails();  // Mostrar detalhes de PCD - MFRC522 Card Reader detalhes
-  //Código de limpeza - Se o botão (wipeB) for pressionado durante a execução da instalação (ligado), a EEPROM
-  if (digitalRead(wipeB) == LOW) {  //quando o botão pressionado pino deve ficar baixo, botão conectado ao TERRA
-    digitalWrite(redLed, LED_ON); // LED vermelho permanece ligado para informar usuário vamos limpar
-    Serial.println(F("Wipe Button Pressed"));
-    Serial.println(F("You have 10 seconds to Cancel"));
-    Serial.println(F("This will be remove all records and cannot be undone"));
-    bool buttonState = monitorWipeButton(10000); // Dê ao usuário tempo suficiente para cancelar a operação
-    if (buttonState == true && digitalRead(wipeB) == LOW) {    // Se o botão ainda for pressionado, limpe a EEPROM
-      Serial.println(F("Starting Wiping EEPROM"));
-      for (uint16_t x = 0; x < EEPROM.length(); x = x + 1) {    //Loop final do endereço da EEPROM
-        if (EEPROM.read(x) == 0) {              //Se o endereço EEPROM 0
-          // não faça nada, já claro, vá para o próximo endereço para economizar tempo e reduzir as gravações para a EEPROM
-        }
-        else {
-          EEPROM.write(x, 0);       // se não escrever 0 para limpar, leva 3.3mS
-        }
-      }
-      Serial.println(F("EEPROM Successfully Wiped"));
-      digitalWrite(redLed, LED_OFF);  // visualize uma limpeza bem sucedida
-      delay(100);
-      digitalWrite(redLed, LED_ON);
-      delay(100);
-      digitalWrite(redLed, LED_OFF);
-      delay(100);
-      digitalWrite(redLed, LED_ON);
-      delay(100);
-      digitalWrite(redLed, LED_OFF);
-    }
-    else {
-      Serial.println(F("Wiping Cancelled")); // Mostrar algum feedback de que o botão de limpeza não foi pressionado por 15 segundos
-      digitalWrite(redLed, LED_OFF);
-    }
   }
    /* Verifique se o cartão mestre definido, se não permitir que o usuário escolha um cartão mestre
    Isso também é útil para apenas redefinir a Master Card
    Você pode manter outros registros EEPROM apenas escrever diferente de 143 para o endereço EEPROM 1
    Endereço EEPROM 1 deve conter um número mágico que é '143'
   */
-  do {
+///////////////////////////////////////// Main Loop ///////////////////////////////////
+void loop () {
+    do {
       successRead = getID();            // define o sucesso Leia para 1 quando formos ler do leitor, caso contrário, 0
       digitalWrite(blueLed, LED_ON);    // Visualize o cartão mestre precisa ser definido
       delay(100);
@@ -116,10 +83,6 @@ void setup() {
       delay(100);
     }
     while (!successRead);
-
-
-///////////////////////////////////////// Main Loop ///////////////////////////////////
-void loop () {
   if (programMode) {
     if ( isMaster(readCard) ) { //Quando no modo de programa verificar primeiro Se o cartão mestre for digitalizado novamente para sair do modo de programa
       Serial.println(F("Master Card Scanned"));
