@@ -108,68 +108,18 @@ void setup() {
    Você pode manter outros registros EEPROM apenas escrever diferente de 143 para o endereço EEPROM 1
    Endereço EEPROM 1 deve conter um número mágico que é '143'
   */
-  if (EEPROM.read(1) != 143) {
-    Serial.println(F("No Master Card Defined"));
-    Serial.println(F("Scan A PICC to Define as Master Card"));
-    do {
+  do {
       successRead = getID();            // define o sucesso Leia para 1 quando formos ler do leitor, caso contrário, 0
       digitalWrite(blueLed, LED_ON);    // Visualize o cartão mestre precisa ser definido
       delay(100);
       digitalWrite(blueLed, LED_OFF);
       delay(100);
     }
-    while (!successRead);                  // O programa não irá mais longe enquanto você não conseguir ler com sucesso
-    for ( uint8_t j = 0; j < 4; j++ ) {        // Laço de 4 vezes
-      EEPROM.write( 2 + j, readCard[j] );  // Escreva o UID do PICC digitalizado para a EEPROM, inicie a partir do endereço 3
-    }
-    EEPROM.write(1, 143);                  // Escreva para EEPROM que definimos Master Card.
-    Serial.println(F("Master Card Defined"));
-  }
-  Serial.println(F("-------------------"));
-  Serial.println(F("Master Card's UID"));
-  for ( uint8_t i = 0; i < 4; i++ ) {          // Leia o UID da Master Card da EEPROM
-    masterCard[i] = EEPROM.read(2 + i);    // Escreva para masterCard
-    Serial.print(masterCard[i], HEX);
-  }
-  Serial.println("");
-  Serial.println(F("-------------------"));
-  Serial.println(F("Everything is ready"));
-  Serial.println(F("Waiting PICCs to be scanned"));
-  cycleLeds();    // Tudo pronto permite que você dê feedback ao usuário
-}
+    while (!successRead);
 
 
 ///////////////////////////////////////// Main Loop ///////////////////////////////////
 void loop () {
-  
-  do {
-    successRead = getID();  /*define o sucessoLeia para 1 quando formos ler do leitor, caso contrário, 0
-     Quando o dispositivo estiver em uso, se o botão de limpeza for pressionado por 10 segundos, inicialize a limpeza da placa master */
-    if (digitalRead(wipeB) == LOW) { // Verifique se o botão está pressionado
-      // Visualize a operação normal é interrompida pressionando o botão Limpe Vermelho é como mais Aviso ao usuário
-      digitalWrite(redLed, LED_ON);  // Certifique-se de que o led está desligado
-      digitalWrite(greenLed, LED_OFF);  // Certifique-se de que o led está desligado
-      digitalWrite(blueLed, LED_OFF); // Certifique-se de que o led está desligado
-      // Dê algum feedback
-      Serial.println(F("Wipe Button Pressed"));
-      Serial.println(F("Master Card will be Erased! in 10 seconds"));
-      bool buttonState = monitorWipeButton(10000); // Dê ao usuário tempo suficiente para cancelar a operação
-      if (buttonState == true && digitalRead(wipeB) == LOW) {    // Se o botão ainda for pressionado, limpe a EEPROM
-        EEPROM.write(1, 0);                  // Redefinir Número Mágico.
-        Serial.println(F("Master Card Erased from device"));
-        Serial.println(F("Please reset to re-program Master Card"));
-        while (1);
-      }
-      Serial.println(F("Master Card Erase Cancelled"));
-    }
-    if (programMode) {
-      cycleLeds();              // O Modo de Programa percorre o Verde Vermelho Azul esperando para ler um novo cartão
-    }
-    else {
-      normalModeOn();     // Modo normal, azul O LED de energia está aceso, todos os outros estão desligados
-    }
-  }
-  while (!successRead);   //o programa não vai mais longe enquanto você não está recebendo uma leitura bem sucedida
   if (programMode) {
     if ( isMaster(readCard) ) { //Quando no modo de programa verificar primeiro Se o cartão mestre for digitalizado novamente para sair do modo de programa
       Serial.println(F("Master Card Scanned"));
