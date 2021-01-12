@@ -74,11 +74,11 @@ void loop()
 		//byte		sak;			// The SAK (Select acknowledge) byte returned from the PICC after successful selection.
 	        //} Uid;
          
-         Serial.println("card selected");
+         //Serial.println("card selected");
          
          /*****************************************writing and reading a block on the card**********************************************************************/
          
-         writeBlock(block, blockcontent);//the blockcontent array is written into the card block
+         //writeBlock(block, blockcontent);//the blockcontent array is written into the card block
          //mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
          
          //The 'PICC_DumpToSerial' method 'dumps' the entire MIFARE data block into the serial monitor. Very useful while programming a sketch with the RFID reader...
@@ -92,7 +92,7 @@ void loop()
          
          readBlock(block, readbackblock);//read the block back
          Serial.print("read block: ");
-         for (int j=0 ; j<16 ; j++)//print the block contents
+         for (int j=0 ; j<10 ; j++)//print the block contents
          {
            Serial.write (readbackblock[j]);//Serial.write() transmits the ASCII numbers as human readable characters to serial monitor
          }

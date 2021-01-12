@@ -42,7 +42,7 @@ uint8_t successRead;    // Inteiro variável para manter se tivermos uma leitura
 byte storedCard[4];   // Armazena uma ID lida da EEPROM
 byte readCard[4];   // Armazena a identificação digitalizada do módulo RFID
 
-byte masterCard[4];   // Armazena o ID da placa principal lido na EEPROM
+byte masterCard[11] = {"3B 1F 89 03"};   // Armazena o ID da placa principal lido na EEPROM
 // Crie a instância MFRC522.
 constexpr uint8_t RST_PIN = 9;     // Configurável, veja o layout típico de pinos acima
 constexpr uint8_t SS_PIN = 10;     // Configurável, veja o layout típico de pinos acima
