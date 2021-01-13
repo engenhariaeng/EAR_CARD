@@ -42,6 +42,8 @@ uint8_t successRead;    // Inteiro variável para manter se tivermos uma leitura
 byte storedCard[4];   // Armazena uma ID lida da EEPROM
 byte readCard[4];   // Armazena a identificação digitalizada do módulo RFID
 
+int block = "";
+
 // Crie a instância MFRC522.
 constexpr uint8_t RST_PIN = 9;     // Configurável, veja o layout típico de pinos acima
 constexpr uint8_t SS_PIN = 10;     // Configurável, veja o layout típico de pinos acima
@@ -72,6 +74,9 @@ void setup() {
   Você pode manter outros registros EEPROM apenas escrever diferente de 143 para o endereço EEPROM 1
   Endereço EEPROM 1 deve conter um número mágico que é '143'
 */
+
+byte readblock[18];
+
 ///////////////////////////////////////// Main Loop ///////////////////////////////////
 void loop () {
   do {
