@@ -1,6 +1,6 @@
 /* PROJETO ESCOLA V3.0
 
- DEFINIÇÃO DAS LIGAÇÕES
+  DEFINIÇÃO DAS LIGAÇÕES
    -----------------------------------------------------------------------------------------
                MFRC522      Arduino       Arduino   Arduino    Arduino          Arduino
                Reader/PCD   Uno/101       Mega      Nano v3    Leonardo/Micro   Pro Micro
@@ -24,7 +24,7 @@
 #define LED_ON HIGH
 #define LED_OFF LOW
 #endif
- const int buzzer = A4;
+const int buzzer = A4;
 
 constexpr uint8_t redLed = 7;   // DEFINIR PINOS DOS LEDS
 constexpr uint8_t greenLed = 6;
@@ -42,7 +42,6 @@ uint8_t successRead;    // Inteiro variável para manter se tivermos uma leitura
 byte storedCard[4];   // Armazena uma ID lida da EEPROM
 byte readCard[4];   // Armazena a identificação digitalizada do módulo RFID
 
-byte masterCard[11] = {"3B 1F 89 03"};   // Armazena o ID da placa principal lido na EEPROM
 // Crie a instância MFRC522.
 constexpr uint8_t RST_PIN = 9;     // Configurável, veja o layout típico de pinos acima
 constexpr uint8_t SS_PIN = 10;     // Configurável, veja o layout típico de pinos acima
@@ -51,13 +50,13 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);
 ///////////////////////////////////////// Setup ///////////////////////////////////
 void setup() {
   //Arduino Pin Configuration
-   pinMode(buzzer,OUTPUT);
+  pinMode(buzzer, OUTPUT);
   pinMode(redLed, OUTPUT);
   pinMode(greenLed, OUTPUT);
   pinMode(blueLed, OUTPUT);
   pinMode(wipeB, INPUT_PULLUP);   //Habilite o resistor de pull up
   pinMode(relay, OUTPUT);//Tenha cuidado como o circuito do relé se comporta enquanto reinicia ou liga e desliga o seu Arduino
-  digitalWrite(relay,HIGH);    // Certifique-se de que a porta esteja trancada
+  digitalWrite(relay, HIGH);   // Certifique-se de que a porta esteja trancada
   digitalWrite(redLed, LED_OFF);  // Certifique-se de que o led está desligado
   digitalWrite(greenLed, LED_OFF);  // Certifique-se de que o led está desligado
   digitalWrite(blueLed, LED_OFF); // Certifique-se de que o led está desligado
@@ -67,24 +66,24 @@ void setup() {
   mfrc522.PCD_Init();    // Inicializar Hardware MFRC522
   //Se você definir Antenna Gain to Max, aumentará a distância de leitura
   // mfrc522.PCD_SetAntennaGain(mfrc522.RxGain_max);
-  }
-   /* Verifique se o cartão mestre definido, se não permitir que o usuário escolha um cartão mestre
-   Isso também é útil para apenas redefinir a Master Card
-   Você pode manter outros registros EEPROM apenas escrever diferente de 143 para o endereço EEPROM 1
-   Endereço EEPROM 1 deve conter um número mágico que é '143'
-  */
+}
+/* Verifique se o cartão mestre definido, se não permitir que o usuário escolha um cartão mestre
+  Isso também é útil para apenas redefinir a Master Card
+  Você pode manter outros registros EEPROM apenas escrever diferente de 143 para o endereço EEPROM 1
+  Endereço EEPROM 1 deve conter um número mágico que é '143'
+*/
 ///////////////////////////////////////// Main Loop ///////////////////////////////////
 void loop () {
-    do {
-      successRead = getID();            // define o sucesso Leia para 1 quando formos ler do leitor, caso contrário, 0
-      digitalWrite(blueLed, LED_ON);    // Visualize o cartão mestre precisa ser definido
-      delay(100);
-      digitalWrite(blueLed, LED_OFF);
-      delay(100);
-    }
-    while (!successRead);
+  do {
+    successRead = getID();            // define o sucesso Leia para 1 quando formos ler do leitor, caso contrário, 0
+    digitalWrite(blueLed, LED_ON);    // Visualize o cartão mestre precisa ser definido
+    delay(100);
+    digitalWrite(blueLed, LED_OFF);
+    delay(100);
+  }
+  while (!successRead);
   if (programMode) {
-    if ( isMaster(readCard) ) { //Quando no modo de programa verificar primeiro Se o cartão mestre for digitalizado novamente para sair do modo de programa
+    if ( isMaster() ) { //Quando no modo de programa verificar primeiro Se o cartão mestre for digitalizado novamente para sair do modo de programa
       Serial.println(F("Master Card Scanned"));
       Serial.println(F("Exiting Program Mode"));
       Serial.println(F("-----------------------------"));
@@ -107,7 +106,7 @@ void loop () {
     }
   }
   else {
-    if ( isMaster(readCard)) {    // Se o ID do cartão digitalizado corresponder ao ID da placa principal - entre no modo de programa
+    if ( isMaster()) {    // Se o ID do cartão digitalizado corresponder ao ID da placa principal - entre no modo de programa
       programMode = true;
       Serial.println(F("Hello Master - Entered Program Mode"));
       uint8_t count = EEPROM.read(0);   // Leia o primeiro Byte da EEPROM que
@@ -139,28 +138,28 @@ void granted ( uint16_t setDelay) {
   digitalWrite(blueLed, LED_OFF);   // Desligue o LED azul
   digitalWrite(redLed, LED_OFF);  // Desligue o LED VERMELHO
   digitalWrite(greenLed, LED_ON);   // Desligue o LED VERDE
-   tone(buzzer,4500);   
+  tone(buzzer, 4500);
   delay(200);
   noTone(buzzer);
-  tone(buzzer,4500);   
+  tone(buzzer, 4500);
   delay(100);
   noTone(buzzer);
   digitalWrite(relay, LOW);     // NIVEL BAIXO
   delay(500);          // NIVEL BAIXO POR ALGUNS SEGUNDOS
   digitalWrite(relay, HIGH);    // NIVEL ALTO
   delay(500);            // Mantenha o LED verde aceso por um SEGUNDO
- /* digitalWrite(relay, LOW);     // NIVEL BAIXO
-  delay(50);          // NIVEL BAIXO POR ALGUNS SEGUNDOS
-  digitalWrite(relay, HIGH);    // NIVEL ALTO
-  delay(50);            // Mantenha o LED verde aceso por um SEGUNDO
-  digitalWrite(relay, LOW);     // NIVEL BAIXO
-  delay(50);          // NIVEL BAIXO POR ALGUNS SEGUNDOS
-  digitalWrite(relay, HIGH);    // NIVEL ALTO
-  delay(50);            // Mantenha o LED verde aceso por um SEGUNDO
-  digitalWrite(relay, LOW);     // NIVEL BAIXO
-  delay(50);          // NIVEL BAIXO POR ALGUNS SEGUNDOS
-  digitalWrite(relay, HIGH);    // NIVEL ALTO
-  delay(50);            // Mantenha o LED verde aceso por um SEGUNDO*/
+  /* digitalWrite(relay, LOW);     // NIVEL BAIXO
+    delay(50);          // NIVEL BAIXO POR ALGUNS SEGUNDOS
+    digitalWrite(relay, HIGH);    // NIVEL ALTO
+    delay(50);            // Mantenha o LED verde aceso por um SEGUNDO
+    digitalWrite(relay, LOW);     // NIVEL BAIXO
+    delay(50);          // NIVEL BAIXO POR ALGUNS SEGUNDOS
+    digitalWrite(relay, HIGH);    // NIVEL ALTO
+    delay(50);            // Mantenha o LED verde aceso por um SEGUNDO
+    digitalWrite(relay, LOW);     // NIVEL BAIXO
+    delay(50);          // NIVEL BAIXO POR ALGUNS SEGUNDOS
+    digitalWrite(relay, HIGH);    // NIVEL ALTO
+    delay(50);            // Mantenha o LED verde aceso por um SEGUNDO*/
 }
 
 ///////////////////////////////////////// Access Denied  ///////////////////////////////////
@@ -182,8 +181,8 @@ uint8_t getID() {
     return 0;
   }
   /* Há PICCs Mifare que têm cuidado UID de 4 ou 7 bytes se você usar PICC de 7 bytes
-   Acho que devemos assumir todos os PICC como eles têm 4 byte UID
-   Até suportarmos PICCs de 7 bytes */
+    Acho que devemos assumir todos os PICC como eles têm 4 byte UID
+    Até suportarmos PICCs de 7 bytes */
   Serial.println(F("Scanned PICC's UID:"));
   for ( uint8_t i = 0; i < 4; i++) {  //
     readCard[i] = mfrc522.uid.uidByte[i];
@@ -220,32 +219,32 @@ void ShowReaderDetails() {
 
 ///////////////////////////////////////// Cycle Leds (Program Mode) ///////////////////////////////////
 void cycleLeds() {
-  digitalWrite(redLed, LED_OFF);  
-  digitalWrite(greenLed, LED_ON);   
-  digitalWrite(blueLed, LED_OFF);  
+  digitalWrite(redLed, LED_OFF);
+  digitalWrite(greenLed, LED_ON);
+  digitalWrite(blueLed, LED_OFF);
   delay(200);
-  digitalWrite(redLed, LED_OFF); 
-  digitalWrite(greenLed, LED_OFF);  
-  digitalWrite(blueLed, LED_ON);  
+  digitalWrite(redLed, LED_OFF);
+  digitalWrite(greenLed, LED_OFF);
+  digitalWrite(blueLed, LED_ON);
   delay(200);
-  digitalWrite(redLed, LED_ON);  
-  digitalWrite(greenLed, LED_OFF);  
-  digitalWrite(blueLed, LED_OFF); 
+  digitalWrite(redLed, LED_ON);
+  digitalWrite(greenLed, LED_OFF);
+  digitalWrite(blueLed, LED_OFF);
   delay(200);
-   tone(buzzer,4500);   
+  tone(buzzer, 4500);
   delay(100);
   noTone(buzzer);
-  tone(buzzer,4500);   
+  tone(buzzer, 4500);
   delay(100);
   noTone(buzzer);
 }
 
 //////////////////////////////////////// Normal Mode Led  ///////////////////////////////////
 void normalModeOn () {
-  digitalWrite(blueLed, LED_ON);  
-  digitalWrite(redLed, LED_OFF);  
-  digitalWrite(greenLed, LED_OFF);  
-  digitalWrite(relay, HIGH);    
+  digitalWrite(blueLed, LED_ON);
+  digitalWrite(redLed, LED_OFF);
+  digitalWrite(greenLed, LED_OFF);
+  digitalWrite(relay, HIGH);
 }
 
 //////////////////////////////////////// Read an ID from EEPROM //////////////////////////////
@@ -268,12 +267,12 @@ void writeID( byte a[] ) {
     }
     successWrite();
     Serial.println(F("Succesfully added ID record to EEPROM"));
-     tone(buzzer,500);   
-  delay(300);
-  noTone(buzzer);
-  tone(buzzer,3000);   
-  delay(300);
-  noTone(buzzer);
+    tone(buzzer, 500);
+    delay(300);
+    noTone(buzzer);
+    tone(buzzer, 3000);
+    delay(300);
+    noTone(buzzer);
   }
   else {
     failedWrite();
@@ -307,13 +306,13 @@ void deleteID( byte a[] ) {
     }
     successDelete();
     Serial.println(F("Succesfully removed ID record from EEPROM"));
-     tone(buzzer,3000);   
-  delay(200);
-  noTone(buzzer);
-  tone(buzzer,500);   
-  delay(300);
-  noTone(buzzer);
- 
+    tone(buzzer, 3000);
+    delay(200);
+    noTone(buzzer);
+    tone(buzzer, 500);
+    delay(300);
+    noTone(buzzer);
+
   }
 }
 
@@ -364,67 +363,88 @@ boolean findID( byte find[] ) {
 ///////////////////////////////////////// Write Success to EEPROM   ///////////////////////////////////
 // Pisca o LED verde 3 vezes para indicar uma gravação bem-sucedida na EEPROM
 void successWrite() {
-  digitalWrite(blueLed, LED_OFF);   
-  digitalWrite(redLed, LED_OFF);  
-  digitalWrite(greenLed, LED_OFF);  
+  digitalWrite(blueLed, LED_OFF);
+  digitalWrite(redLed, LED_OFF);
+  digitalWrite(greenLed, LED_OFF);
   delay(200);
-  digitalWrite(greenLed, LED_ON);  
+  digitalWrite(greenLed, LED_ON);
   delay(200);
-  digitalWrite(greenLed, LED_OFF);  
+  digitalWrite(greenLed, LED_OFF);
   delay(200);
-  digitalWrite(greenLed, LED_ON); 
+  digitalWrite(greenLed, LED_ON);
   delay(200);
-  digitalWrite(greenLed, LED_OFF); 
+  digitalWrite(greenLed, LED_OFF);
   delay(200);
-  digitalWrite(greenLed, LED_ON);   
+  digitalWrite(greenLed, LED_ON);
   delay(200);
 }
 
 ///////////////////////////////////////// Write Failed to EEPROM   ///////////////////////////////////
 //Pisca o LED vermelho 3 vezes para indicar uma falha na gravação na EEPROM
 void failedWrite() {
-  digitalWrite(blueLed, LED_OFF);   
-  digitalWrite(redLed, LED_OFF); 
-  digitalWrite(greenLed, LED_OFF);  
+  digitalWrite(blueLed, LED_OFF);
+  digitalWrite(redLed, LED_OFF);
+  digitalWrite(greenLed, LED_OFF);
   delay(200);
-  digitalWrite(redLed, LED_ON);  
+  digitalWrite(redLed, LED_ON);
   delay(200);
-  digitalWrite(redLed, LED_OFF);  
+  digitalWrite(redLed, LED_OFF);
   delay(200);
-  digitalWrite(redLed, LED_ON);   
+  digitalWrite(redLed, LED_ON);
   delay(200);
-  digitalWrite(redLed, LED_OFF); 
+  digitalWrite(redLed, LED_OFF);
   delay(200);
-  digitalWrite(redLed, LED_ON);   
+  digitalWrite(redLed, LED_ON);
   delay(200);
 }
 
 ///////////////////////////////////////// Success Remove UID From EEPROM  ///////////////////////////////////
 // Pisca o LED azul 3 vezes para indicar um sucesso excluir para EEPROM
 void successDelete() {
-  digitalWrite(blueLed, LED_OFF);   
-  digitalWrite(redLed, LED_OFF); 
-  digitalWrite(greenLed, LED_OFF);  
+  digitalWrite(blueLed, LED_OFF);
+  digitalWrite(redLed, LED_OFF);
+  digitalWrite(greenLed, LED_OFF);
   delay(200);
-  digitalWrite(blueLed, LED_ON); 
+  digitalWrite(blueLed, LED_ON);
   delay(200);
-  digitalWrite(blueLed, LED_OFF);  
+  digitalWrite(blueLed, LED_OFF);
   delay(200);
-  digitalWrite(blueLed, LED_ON);  
+  digitalWrite(blueLed, LED_ON);
   delay(200);
-  digitalWrite(blueLed, LED_OFF);  
+  digitalWrite(blueLed, LED_OFF);
   delay(200);
-  digitalWrite(blueLed, LED_ON);  
+  digitalWrite(blueLed, LED_ON);
   delay(200);
 }
 
 ////////////////////// Check readCard IF is masterCard   ///////////////////////////////////
 // Verifique se o ID passado é o cartão mestre de programação
-boolean isMaster( byte test[] ) {
-  if ( checkTwo( test, masterCard ) )
+boolean isMaster() {
+  Serial.print("UID tag :");
+  String content = "";
+  byte letter;
+  for (byte i = 0; i < mfrc522.uid.size; i++)
+  {
+    Serial.print(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " ");
+    Serial.print(mfrc522.uid.uidByte[i], HEX);
+    content.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " "));
+    content.concat(String(mfrc522.uid.uidByte[i], HEX));
+  }
+  Serial.println();
+  Serial.print("Message : ");
+  content.toUpperCase();
+
+  if (content.substring(1) == "3B 1F 89 03" or content.substring(1) == "76 D8 AD 1F") //change here the UID of the card/cards that you want to give access 76 D8 AD 1F
+  {
+    Serial.println("Authorized access");
+    Serial.println();
+    delay(1000);
     return true;
-  else
+  } else   {
+    Serial.println(" Access denied");
     return false;
+  }
+
 }
 
 bool monitorWipeButton(uint32_t interval) {
