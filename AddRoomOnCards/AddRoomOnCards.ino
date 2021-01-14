@@ -41,14 +41,14 @@ boolean firstTime = true;
 uint8_t successRead;    // Inteiro variável para manter se tivermos uma leitura bem-sucedida do Reader
 
 byte storedCard[4];   // Armazena uma ID lida da EEPROM
-byte readCard[4];   // Armazena a identificação digitalizada do módulo RFID
-
-int block = "";
+byte roomTag[4];   // Armazena a identificação digitalizada do módulo RFID
+int block = 9;
 
 // Crie a instância MFRC522.
 constexpr uint8_t RST_PIN = 9;     // Configurável, veja o layout típico de pinos acima
 constexpr uint8_t SS_PIN = 10;     // Configurável, veja o layout típico de pinos acima
 MFRC522 mfrc522(SS_PIN, RST_PIN);
+MFRC522::MIFARE_Key key;//create a MIFARE_Key struct named 'key', which will hold the card information
 
 ///////////////////////////////////////// Setup ///////////////////////////////////
 void setup() {
@@ -69,6 +69,9 @@ void setup() {
   mfrc522.PCD_Init();    // Inicializar Hardware MFRC522
   //Se você definir Antenna Gain to Max, aumentará a distância de leitura
   // mfrc522.PCD_SetAntennaGain(mfrc522.RxGain_max);
+  for (byte i = 0; i < 6; i++) {
+    key.keyByte[i] = 0xFF;//keyByte is defined in the "MIFARE_Key" 'struct' definition in the .h file of the library
+  }
 }
 /* Verifique se o cartão mestre definido, se não permitir que o usuário escolha um cartão mestre
   Isso também é útil para apenas redefinir a Master Card
@@ -97,13 +100,14 @@ void loop () {
       return;
     }
     else {
-      //showTagCard(readCard);//apresenta a tag lida atualmente. //Já sabemos fazer isso.
+      //showTagCard(roomTag);//apresenta a tag lida atualmente. //Já sabemos fazer isso.
       Serial.println(F("Adding tag to card..."));
-      //addRoomOnCard(readCard);//Adcionar a tag de uma sala a uma cartão // talvez o parâmetro seja outro.
+      //addRoomOnCard(roomTag);//Adcionar a tag de uma sala a uma cartão // talvez o parâmetro seja outro.
       Serial.println("-----------------------------");
       Serial.println(F("Added!"));
       firstTime = true;
       programMode = true;
+      return;
     }
   }
   else {
@@ -119,9 +123,7 @@ void loop () {
       Serial.println(F("Scan Master Card again to Exit Program Mode"));
       Serial.println(F("-----------------------------"));
       firstTime = false;
-    }
-    else {
-      Serial.print(F("Why this code fall in this else? "));
+      return;
     }
   }
 }
@@ -161,17 +163,56 @@ uint8_t getID() {
   if ( ! mfrc522.PICC_ReadCardSerial()) {   //Desde que um PICC colocado obtenha o Serial e continue
     return 0;
   }
-  /* Há PICCs Mifare que têm cuidado UID de 4 ou 7 bytes se você usar PICC de 7 bytes
-    Acho que devemos assumir todos os PICC como eles têm 4 byte UID
-    Até suportarmos PICCs de 7 bytes */
-  Serial.println(F("Scanned PICC's UID:"));
-  for ( uint8_t i = 0; i < 4; i++) {  //
-    readCard[i] = mfrc522.uid.uidByte[i];
-    Serial.print(readCard[i], HEX);
+  if (firstTime) {
+    Serial.println(F("Scanned PICC's UID:"));
+    for ( uint8_t i = 0; i < 4; i++) {  //
+      roomTag[i] = mfrc522.uid.uidByte[i];
+      Serial.print(roomTag[i], HEX);
+    }
+    Serial.println("");
+  } else {
+    writeBlock(block, roomTag);
+    
   }
-  Serial.println("");
   mfrc522.PICC_HaltA(); // PARAR LEITURA
   return 1;
+}
+
+void writeBlock(int blockNumber, byte arrayAddress[]) {
+  int largestModulo4Number = blockNumber / 4 * 4;
+  int trailerBlock = largestModulo4Number + 3; //determine trailer block for the sector
+  if (blockNumber > 2 && (blockNumber + 1) % 4 == 0) {
+    Serial.print(blockNumber);  //block number is a trailer block (modulo 4); quit and send error code 2
+    Serial.println(" is a trailer block:");
+    return 2;
+  }
+  Serial.print(blockNumber);
+  Serial.println(" is a data block:");
+
+  /*****************************************authentication of the desired block for access***********************************************************/
+  byte status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, trailerBlock, &key, &(mfrc522.uid));
+
+  if (status != MFRC522::STATUS_OK) {
+    Serial.print("PCD_Authenticate() failed: ");
+    Serial.println(mfrc522.GetStatusCodeName(status));
+    return 3;//return "3" as error message
+  }
+  //it appears the authentication needs to be made before every block read/write within a specific sector.
+  //If a different sector is being authenticated access to the previous one is lost.
+
+
+  /*****************************************writing the block***********************************************************/
+
+  status = mfrc522.MIFARE_Write(blockNumber, arrayAddress, 16);//valueBlockA is the block number, MIFARE_Write(block number (0-15), byte array containing 16 values, number of bytes in block (=16))
+  //status = mfrc522.MIFARE_Write(9, value1Block, 16);
+  if (status != MFRC522::STATUS_OK) {
+    Serial.print("MIFARE_Write() failed: ");
+    Serial.println(mfrc522.GetStatusCodeName(status));
+    return 4;//return "4" as error message
+  
+  }
+  Serial.println("block was written");
+  firstTime = false;
 }
 
 void ShowReaderDetails() {
@@ -228,84 +269,7 @@ void normalModeOn () {
   digitalWrite(relay, HIGH);
 }
 
-//////////////////////////////////////// Read an ID from EEPROM //////////////////////////////
-void readID( uint8_t number ) {
-  uint8_t start = (number * 4 ) + 2;    // Descobrir a posição inicial
-  for ( uint8_t i = 0; i < 4; i++ ) {     // Loop 4 vezes para obter os 4 bytes
-    storedCard[i] = EEPROM.read(start + i);   // Atribuir valores lidos da EEPROM para o array
-  }
-}
-
-///////////////////////////////////////// Add ID to EEPROM   ///////////////////////////////////
-void writeID( byte a[] ) {
-  if ( !findID( a ) ) {     // Antes de escrevermos para a EEPROM, verifique se já vimos este cartão antes!
-    uint8_t num = EEPROM.read(0);     // Obter o numer de espaços usados, a posição 0 armazena o número de cartões de identificação
-    uint8_t start = ( num * 4 ) + 6;  // Descubra onde o próximo slot começa
-    num++;                // Incrementar o contador por um
-    EEPROM.write( 0, num );     // Escreva a nova contagem para o contador
-    for ( uint8_t j = 0; j < 4; j++ ) {   // Laço de 4 vezes
-      EEPROM.write( start + j, a[j] );  // Escreva os valores da matriz para EEPROM na posição correta
-    }
-    successWrite();
-    Serial.println(F("Succesfully added ID record to EEPROM"));
-    tone(buzzer, 500);
-    delay(300);
-    noTone(buzzer);
-    tone(buzzer, 3000);
-    delay(300);
-    noTone(buzzer);
-  }
-  else {
-    failedWrite();
-    Serial.println(F("Failed! There is something wrong with ID or bad EEPROM"));
-  }
-}
-
-///////////////////////////////////////// Check Bytes   ///////////////////////////////////
-boolean checkTwo ( byte a[], byte b[] ) {
-  if ( a[0] != 0 )      // Certifique-se de que há algo no array primeiro
-    match = true;       //Suponha que eles combinem primeiro
-  for ( uint8_t k = 0; k < 4; k++ ) {   //Laço de 4 vezes
-    if ( a[k] != b[k] )     // SE a! = B, em seguida, defina match = false, um falhará, todos falharão
-      match = false;
-  }
-  if ( match ) {      // Verifique se a correspondência ainda é verdadeira
-    return true;      // Retorno verdadeiro
-  }
-  else  {
-    return false;       //Retorna falso
-  }
-}
-
-///////////////////////////////////////// Find Slot   ///////////////////////////////////
-uint8_t findIDSLOT( byte find[] ) {
-  uint8_t count = EEPROM.read(0);       // Leia o primeiro Byte da EEPROM que
-  for ( uint8_t i = 1; i <= count; i++ ) {    //Loop uma vez para cada entrada da EEPROM
-    readID(i);                // Leia uma ID da EEPROM, ela é armazenada no cartão armazenado [4]
-    if ( checkTwo( find, storedCard ) ) {   // Verifique para ver se o cartão armazenado leu de EEPROM
-      //é o mesmo que o cartão de identificação find [] passado
-      return i;         // O número do slot do cartão
-      break;          // Pare de olhar, encontramos
-    }
-  }
-}
-
-///////////////////////////////////////// Find ID From EEPROM   ///////////////////////////////////
-boolean findID( byte find[] ) {
-  uint8_t count = EEPROM.read(0);     // Leia o primeiro Byte da EEPROM que
-  for ( uint8_t i = 1; i <= count; i++ ) {    // Loop uma vez para cada entrada da EEPROM
-    readID(i);          // Leia uma ID da EEPROM, ela é armazenada no cartão armazenado [4]
-    if ( checkTwo( find, storedCard ) ) {   // Verifique para ver se o cartão armazenado leu de EEPROM
-      return true;
-      break;  // Stop looking we found it
-    }
-    else {    // If not, return false
-    }
-  }
-  return false;
-}
-
-///////////////////////////////////////// Write Success to EEPROM   ///////////////////////////////////
+//////////////////////////////////////// Write Success to EEPROM   ///////////////////////////////////
 // Pisca o LED verde 3 vezes para indicar uma gravação bem-sucedida na EEPROM
 void successWrite() {
   digitalWrite(blueLed, LED_OFF);
@@ -362,35 +326,6 @@ void successDelete() {
   delay(200);
 }
 
-////////////////////// Check readCard IF is masterCard   ///////////////////////////////////
-// Verifique se o ID passado é o cartão mestre de programação
-boolean isMaster() {
-  Serial.print("UID tag :");
-  String content = "";
-  byte letter;
-  for (byte i = 0; i < mfrc522.uid.size; i++)
-  {
-    Serial.print(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " ");
-    Serial.print(mfrc522.uid.uidByte[i], HEX);
-    content.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " "));
-    content.concat(String(mfrc522.uid.uidByte[i], HEX));
-  }
-  Serial.println();
-  Serial.print("Message : ");
-  content.toUpperCase();
-
-  if (content.substring(1) == "3B 1F 89 03" or content.substring(1) == "76 D8 AD 1F") //change here the UID of the card/cards that you want to give access 76 D8 AD 1F
-  {
-    Serial.println("Authorized access");
-    Serial.println();
-    delay(1000);
-    return true;
-  } else   {
-    Serial.println(" Access denied");
-    return false;
-  }
-
-}
 
 bool monitorWipeButton(uint32_t interval) {
   uint32_t now = (uint32_t)millis();
