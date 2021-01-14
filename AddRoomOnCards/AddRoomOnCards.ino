@@ -41,14 +41,16 @@ boolean firstTime = true;
 uint8_t successRead;    // Inteiro variável para manter se tivermos uma leitura bem-sucedida do Reader
 
 byte storedCard[4];   // Armazena uma ID lida da EEPROM
-byte readCard[4];   // Armazena a identificação digitalizada do módulo RFID
-
+byte blockContent[16]; //Armazena a tag que irá para o cartão
+byte readCard[16];   // Armazena a identificação digitalizada do módulo RFID
+int blockCard = 8;
 int block = "";
 
 // Crie a instância MFRC522.
 constexpr uint8_t RST_PIN = 9;     // Configurável, veja o layout típico de pinos acima
 constexpr uint8_t SS_PIN = 10;     // Configurável, veja o layout típico de pinos acima
 MFRC522 mfrc522(SS_PIN, RST_PIN);
+MFRC522::MIFARE_Key key;//create a MIFARE_Key struct named 'key', which will hold the card information
 
 ///////////////////////////////////////// Setup ///////////////////////////////////
 void setup() {
@@ -76,8 +78,6 @@ void setup() {
   Endereço EEPROM 1 deve conter um número mágico que é '143'
 */
 
-byte readblock[18];
-
 ///////////////////////////////////////// Main Loop ///////////////////////////////////
 void loop () {
   do {
@@ -97,11 +97,10 @@ void loop () {
       return;
     }
     else {
-      //showTagCard(readCard);//apresenta a tag lida atualmente. //Já sabemos fazer isso.
-      Serial.println(F("Adding tag to card..."));
-      //addRoomOnCard(readCard);//Adcionar a tag de uma sala a uma cartão // talvez o parâmetro seja outro.
+      Serial.println(F("Adcionando tag cartão..."));
+      writeBlock(blockCard, blockContent);;//Adcionar a tag de uma sala a uma cartão // talvez o parâmetro seja outro.
       Serial.println("-----------------------------");
-      Serial.println(F("Added!"));
+      Serial.println(F("Adcionado!"));
       firstTime = true;
       programMode = true;
     }
@@ -109,14 +108,15 @@ void loop () {
   else {
     if (firstTime) {    // Se é a primeira vez que o RFID está lendo um cartão. Endendesse que o mesmo é de uma sala.
       programMode = true;
-      Serial.println(F("Hello Room Tag - Entered Program Mode"));
-      uint8_t count = EEPROM.read(0);   // Leia o primeiro Byte da EEPROM que
-      Serial.print(F("I have "));     // armazena o número de IDs na EEPROM
-      Serial.print(count);
-      Serial.print(F(" record(s) on EEPROM"));
-      Serial.println("");
-      Serial.println(F("Scan a PICC to ADD or REMOVE to EEPROM"));
-      Serial.println(F("Scan Master Card again to Exit Program Mode"));
+      Serial.println(F("Olá tag da sala! irei gravar você!"));
+      for (uint8_t i = 0; i < 16; i++) {
+        blockContent[i] = readCard[i];
+        Serial.print(blockContent[i], HEX);
+      }
+      Serial.println();
+      Serial.print(F("Será o valor gravado no bloco "));
+      Serial.println(blockCard);
+      Serial.println(F("Esperando cartão para ser gravado..."));
       Serial.println(F("-----------------------------"));
       firstTime = false;
     }
@@ -124,6 +124,43 @@ void loop () {
       Serial.print(F("Why this code fall in this else? "));
     }
   }
+}
+
+int writeBlock(int blockNumber, byte arrayAddress[])
+{
+  //this makes sure that we only write into data blocks. Every 4th block is a trailer block for the access/security info.
+  int largestModulo4Number = blockNumber / 4 * 4;
+  int trailerBlock = largestModulo4Number + 3; //determine trailer block for the sector
+  if (blockNumber > 2 && (blockNumber + 1) % 4 == 0) {
+    Serial.print(blockNumber);  //block number is a trailer block (modulo 4); quit and send error code 2
+    Serial.println(" is a trailer block:");
+    return 2;
+  }
+  Serial.print(blockNumber);
+  Serial.println(" is a data block:");
+
+  /*****************************************authentication of the desired block for access***********************************************************/
+  byte status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, trailerBlock, &key, &(mfrc522.uid));
+
+  if (status != MFRC522::STATUS_OK) {
+    Serial.print("PCD_Authenticate() failed: ");
+    Serial.println(mfrc522.GetStatusCodeName(status));
+    return 3;//return "3" as error message
+  }
+  //it appears the authentication needs to be made before every block read/write within a specific sector.
+  //If a different sector is being authenticated access to the previous one is lost.
+
+
+  /*****************************************writing the block***********************************************************/
+
+  status = mfrc522.MIFARE_Write(blockNumber, arrayAddress, 16);//valueBlockA is the block number, MIFARE_Write(block number (0-15), byte array containing 16 values, number of bytes in block (=16))
+  //status = mfrc522.MIFARE_Write(9, value1Block, 16);
+  if (status != MFRC522::STATUS_OK) {
+    Serial.print("MIFARE_Write() failed: ");
+    Serial.println(mfrc522.GetStatusCodeName(status));
+    return 4;//return "4" as error message
+  }
+  Serial.println("block was written");
 }
 
 /////////////////////////////////////////  Access Granted    ///////////////////////////////////
@@ -165,14 +202,18 @@ uint8_t getID() {
     Acho que devemos assumir todos os PICC como eles têm 4 byte UID
     Até suportarmos PICCs de 7 bytes */
   Serial.println(F("Scanned PICC's UID:"));
-  for ( uint8_t i = 0; i < 4; i++) {  //
+  for ( uint8_t i = 0; i < 16; i++) {  //
     readCard[i] = mfrc522.uid.uidByte[i];
     Serial.print(readCard[i], HEX);
   }
   Serial.println("");
   mfrc522.PICC_HaltA(); // PARAR LEITURA
   return 1;
+
 }
+
+
+
 
 void ShowReaderDetails() {
   // Obtenha a versão do software MFRC522
