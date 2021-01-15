@@ -42,7 +42,6 @@ uint8_t successRead;    // Inteiro variável para manter se tivermos uma leitura
 
 byte storedCard[4];   // Armazena uma ID lida da EEPROM
 byte roomTag[4];   // Armazena a identificação digitalizada do módulo RFID
-int block = 9;
 
 // Crie a instância MFRC522.
 constexpr uint8_t RST_PIN = 9;     // Configurável, veja o layout típico de pinos acima
@@ -73,11 +72,6 @@ void setup() {
     key.keyByte[i] = 0xFF;//keyByte is defined in the "MIFARE_Key" 'struct' definition in the .h file of the library
   }
 }
-/* Verifique se o cartão mestre definido, se não permitir que o usuário escolha um cartão mestre
-  Isso também é útil para apenas redefinir a Master Card
-  Você pode manter outros registros EEPROM apenas escrever diferente de 143 para o endereço EEPROM 1
-  Endereço EEPROM 1 deve conter um número mágico que é '143'
-*/
 
 byte readblock[18];
 
@@ -171,22 +165,83 @@ uint8_t getID() {
     }
     Serial.println("");
   } else {
-    writeBlock(block, roomTag);
-    
+    writeBlock(getFreeBlock(), roomTag);
+
   }
   mfrc522.PICC_HaltA(); // PARAR LEITURA
   return 1;
 }
 
-void writeBlock(int blockNumber, byte arrayAddress[]) {
-  int largestModulo4Number = blockNumber / 4 * 4;
+int getFreeBlock() {
+  int blockToWrite;
+  int readBlock=1;
+  boolean finded = false;
+  while (finded == false) {
+    String content = "";
+    byte buffer[18];
+    byte len = 18;
+    boolean access = false;
+
+    byte status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, readBlock, &key, &(mfrc522.uid));
+    if (status != MFRC522::STATUS_OK) {
+      Serial.println(F("Authentication failed: "));
+      Serial.println(mfrc522.GetStatusCodeName(status));
+      finded = true;
+    }
+
+    status = mfrc522.MIFARE_Read(readBlock, buffer, &len);
+    if (status != MFRC522::STATUS_OK) {
+      Serial.println(F("Reading failed: "));
+      Serial.println(mfrc522.GetStatusCodeName(status));
+      finded = true;
+    }
+
+
+    Serial.print(readBlock);
+    Serial.print(" block is: ");
+    for (uint8_t i = 0; i < 4; i++)
+    {
+      Serial.print(buffer[i] < 0x10 ? " 0" : " ");
+      Serial.print(buffer[i], HEX);
+      content.concat(String(buffer[i] < 0x10 ? " 0" : " "));
+      content.concat(String(buffer[i], HEX));
+    }
+    Serial.println("");
+    content.toUpperCase();
+
+
+    if (content.substring(1) == "00 00 00 00")
+    {
+      Serial.println("I find a free block!");
+      Serial.println();
+      blockToWrite = readBlock;
+      readBlock = 1;
+      finded = true;
+    } else {
+      if (readBlock + 1 == 63) {
+        Serial.println("Dont find a block to write!");
+        Serial.println();
+        delay(100);
+        blockToWrite = 0;
+        readBlock = 1;
+        finded = true;
+      } else {
+        readBlock = readBlock + 1;
+      }
+    }
+  }
+  return blockToWrite;
+}
+
+void writeBlock(int blockToWrite, byte arrayAddress[]) {
+int largestModulo4Number = blockToWrite / 4 * 4;
   int trailerBlock = largestModulo4Number + 3; //determine trailer block for the sector
-  if (blockNumber > 2 && (blockNumber + 1) % 4 == 0) {
-    Serial.print(blockNumber);  //block number is a trailer block (modulo 4); quit and send error code 2
+  if (blockToWrite > 2 && (blockToWrite + 1) % 4 == 0) {
+    Serial.print(blockToWrite);  //block number is a trailer block (modulo 4); quit and send error code 2
     Serial.println(" is a trailer block:");
     return 2;
   }
-  Serial.print(blockNumber);
+  Serial.print(blockToWrite);
   Serial.println(" is a data block:");
 
   /*****************************************authentication of the desired block for access***********************************************************/
@@ -195,24 +250,17 @@ void writeBlock(int blockNumber, byte arrayAddress[]) {
   if (status != MFRC522::STATUS_OK) {
     Serial.print("PCD_Authenticate() failed: ");
     Serial.println(mfrc522.GetStatusCodeName(status));
-    return 3;//return "3" as error message
+    return;
   }
-  //it appears the authentication needs to be made before every block read/write within a specific sector.
-  //If a different sector is being authenticated access to the previous one is lost.
-
-
   /*****************************************writing the block***********************************************************/
-
-  status = mfrc522.MIFARE_Write(blockNumber, arrayAddress, 16);//valueBlockA is the block number, MIFARE_Write(block number (0-15), byte array containing 16 values, number of bytes in block (=16))
+  status = mfrc522.MIFARE_Write(blockToWrite, arrayAddress, 16);//valueBlockA is the block number, MIFARE_Write(block number (0-15), byte array containing 16 values, number of bytes in block (=16))
   //status = mfrc522.MIFARE_Write(9, value1Block, 16);
   if (status != MFRC522::STATUS_OK) {
     Serial.print("MIFARE_Write() failed: ");
     Serial.println(mfrc522.GetStatusCodeName(status));
-    return 4;//return "4" as error message
-  
+    return;
   }
   Serial.println("block was written");
-  firstTime = false;
 }
 
 void ShowReaderDetails() {
