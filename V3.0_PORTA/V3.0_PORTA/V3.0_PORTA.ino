@@ -48,6 +48,9 @@ int block = "";
 constexpr uint8_t RST_PIN = 9;     // Configurável, veja o layout típico de pinos acima
 constexpr uint8_t SS_PIN = 10;     // Configurável, veja o layout típico de pinos acima
 MFRC522 mfrc522(SS_PIN, RST_PIN);
+MFRC522::MIFARE_Key key;
+MFRC522::StatusCode status;
+
 
 ///////////////////////////////////////// Setup ///////////////////////////////////
 void setup() {
@@ -68,24 +71,80 @@ void setup() {
   mfrc522.PCD_Init();    // Inicializar Hardware MFRC522
   //Se você definir Antenna Gain to Max, aumentará a distância de leitura
   // mfrc522.PCD_SetAntennaGain(mfrc522.RxGain_max);
+  Serial.println(F("Leitura dos Dados :"));
 }
-/* Verifique se o cartão mestre definido, se não permitir que o usuário escolha um cartão mestre
-  Isso também é útil para apenas redefinir a Master Card
-  Você pode manter outros registros EEPROM apenas escrever diferente de 143 para o endereço EEPROM 1
-  Endereço EEPROM 1 deve conter um número mágico que é '143'
-*/
-
-byte readblock[18];
 
 ///////////////////////////////////////// Main Loop ///////////////////////////////////
 void loop () {
-  do {
+
+
+  for (byte i = 0; i < 6; i++) key.keyByte[i] = 0xFF;
+
+  byte block;
+  byte len;
+
+  if ( ! mfrc522.PICC_IsNewCardPresent()) {
+    return;
+
+  }
+
+  if ( ! mfrc522.PICC_ReadCardSerial()) {
+    return;
+
+  }
+
+  Serial.println (F("Cartão Detectado"));
+
+  byte buffer[18];
+
+  block = 8;
+  len = 18;
+
+  ///////////// Autenticação ////////////////////////
+
+  status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, 8, &key, &(mfrc522.uid));
+  if (status != MFRC522::STATUS_OK) {
+    Serial.print(F("Authentication failed: "));
+    Serial.println(mfrc522.GetStatusCodeName(status));
+    return;
+  }
+
+  ///////////// Leitura ////////////////////////
+
+  status = mfrc522.MIFARE_Read(block, buffer, &len);
+  if (status != MFRC522::STATUS_OK) {
+    Serial.print(F("Reading failed: "));
+    Serial.println(mfrc522.GetStatusCodeName(status));
+    return;
+  }
+
+  String content = "";
+  for (uint8_t i = 0; i < 16; i++)
+  {
+     Serial.print(buffer[i] < 0x10 ? " 0" : " ");
+     Serial.print(buffer[i], HEX);
+     content.concat(String(buffer[i] < 0x10 ? " 0" : " "));
+     content.concat(String(buffer[i], HEX));
+  }
+  Serial.println();
+  Serial.print("Message : ");
+  content.toUpperCase();
+
+  Serial.println(F("Finalizado"));
+ 
+  delay(1000);
+ 
+  mfrc522.PICC_HaltA();//PARA
+  mfrc522.PCD_StopCrypto1();
+
+
+  /*do {
     successRead = getID();            // define o sucesso Leia para 1 quando formos ler do leitor, caso contrário, 0
     digitalWrite(blueLed, LED_ON);    // Visualize o cartão mestre precisa ser definido
     delay(100);
     digitalWrite(blueLed, LED_OFF);
     delay(100);
-  }
+    }
   while (!successRead);
   if (programMode) {
     if ( isMaster() ) { //Quando no modo de programa verificar primeiro Se o cartão mestre for digitalizado novamente para sair do modo de programa
@@ -135,7 +194,7 @@ void loop () {
         denied();
       }
     }
-  }
+  }*/
 }
 
 /////////////////////////////////////////  Access Granted    ///////////////////////////////////
@@ -188,11 +247,13 @@ uint8_t getID() {
   /* Há PICCs Mifare que têm cuidado UID de 4 ou 7 bytes se você usar PICC de 7 bytes
     Acho que devemos assumir todos os PICC como eles têm 4 byte UID
     Até suportarmos PICCs de 7 bytes */
-  Serial.println(F("Scanned PICC's UID:"));
+  Serial.println(F("Scanned PICC's UID HEX:"));
   for ( uint8_t i = 0; i < 4; i++) {  //
     readCard[i] = mfrc522.uid.uidByte[i];
-    Serial.print(readCard[i], HEX);
+
+    Serial.print(readCard[i]);
   }
+
   Serial.println("");
   mfrc522.PICC_HaltA(); // PARAR LEITURA
   return 1;
