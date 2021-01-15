@@ -1,4 +1,4 @@
-/* PROJETO ESCOLA V3.0
+/* PROJETO SGA V1.0 - Dar acesso as salas da instutuição adcionando o código dala ao cartão do funcionário. 
 
   DEFINIÇÃO DAS LIGAÇÕES
    -----------------------------------------------------------------------------------------
@@ -39,10 +39,6 @@ boolean replaceMaster = false;
 
 uint8_t successRead;    // Inteiro variável para manter se tivermos uma leitura bem-sucedida do Reader
 
-byte storedCard[4];   // Armazena uma ID lida da EEPROM
-byte readCard[4];   // Armazena a identificação digitalizada do módulo RFID
-
-// Crie a instância MFRC522.
 constexpr uint8_t RST_PIN = 9;     // Configurável, veja o layout típico de pinos acima
 constexpr uint8_t SS_PIN = 10;     // Configurável, veja o layout típico de pinos acima
 MFRC522 mfrc522(SS_PIN, RST_PIN);
@@ -131,49 +127,51 @@ uint8_t verifyAccess() {
     content.toUpperCase();
     
 
-    if (content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or
-        content.substring(1) == "71 65 BE 08" or) //change here the UID of the card/cards that you want to give access 76 D8 AD 1F
+    if (content.substring(1) == "D0 15 70 25" /*SALA 62*/ or 
+        content.substring(1) == "C0 FC 5D 25" /*SALA 63*/ or 
+        content.substring(1) == "C0 A7 E7 25" /*SALA 64*/ or 
+        content.substring(1) == "D0 48 C6 25" /*SALA 65*/ or
+        content.substring(1) == "A0 A5 43 25" /*SALA 66*/ or
+        content.substring(1) == "D0 80 A4 25" /*SALA 67*/ or
+        content.substring(1) == "86 66 2E 1F" /*SALA 68*/ or
+        content.substring(1) == "86 98 5F 1F" /*SALA 69*/ or
+        content.substring(1) == "86 05 56 1F" /*SALA 70*/ or
+        content.substring(1) == "D0 CE 88 25" /*SALA 71*/ or
+        content.substring(1) == "71 65 BE 08" /*SALA 72*/ or
+        content.substring(1) == "D0 84 33 25" /*SALA 73*/ or
+        content.substring(1) == "B0 61 09 25" /*SALA 74*/ or
+        content.substring(1) == "76 BA 6F 1F" /*SALA 75*/ or
+        content.substring(1) == "86 0A EB 1F" /*SALA 76*/ or
+        content.substring(1) == "B0 96 DC 25" /*SALA 80*/ or
+        content.substring(1) == "D0 98 47 25" /*SALA 81*/ or
+        content.substring(1) == "86 7C 78 1F" /*SALA 82*/ or
+        content.substring(1) == "64 98 54 FF" /*SALA 83*/ or
+        content.substring(1) == "86 2A 86 1F" /*SALA 84*/ or
+        content.substring(1) == "B0 1C 8B 25" /*SALA 85*/ or
+        content.substring(1) == "71 12 C4 08" /*SALA 86*/or
+        content.substring(1) == "86 9D E8 1F" /*SALA 87*/ or
+        content.substring(1) == "D0 20 2C 25" /*SALA 88*/ or
+        content.substring(1) == "D0 86 99 25" /*SALA 89*/) //change here the UID of the card/cards that you want to give access 76 D8 AD 1F
     {
-      Serial.println("Authorized access");
+      Serial.println("Authorized access");     
       Serial.println();
-      
-      block = 1;
       finded = true;
+      block = 1; 
+      granted(500);
     } else {
       if (block + 1 == 63) {
         Serial.println("Not authorized access");
         Serial.println();
         delay(100);
-        block = 1;
         finded = true;
+        block = 1;       
+        denied();
       } else {
         block = block + 1;
       }
-
     }
   }
-  mfrc522.PICC_HaltA();//PARA
+  mfrc522.PICC_HaltA();
   mfrc522.PCD_StopCrypto1();
 }
 
