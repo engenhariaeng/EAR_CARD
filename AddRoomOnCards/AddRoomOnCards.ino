@@ -174,7 +174,7 @@ uint8_t getID() {
 
 int getFreeBlock() {
   int blockToWrite;
-  int readBlock=1;
+  int readBlock = 1;
   boolean finded = false;
   while (finded == false) {
     String content = "";
@@ -201,10 +201,12 @@ int getFreeBlock() {
     Serial.print(" block is: ");
     for (uint8_t i = 0; i < 4; i++)
     {
-      Serial.print(buffer[i] < 0x10 ? " 0" : " ");
-      Serial.print(buffer[i], HEX);
-      content.concat(String(buffer[i] < 0x10 ? " 0" : " "));
-      content.concat(String(buffer[i], HEX));
+      if (!(readBlock > 2 && (readBlock + 1) % 4 == 0)) {
+        Serial.print(buffer[i] < 0x10 ? " 0" : " ");
+        Serial.print(buffer[i], HEX);
+        content.concat(String(buffer[i] < 0x10 ? " 0" : " "));
+        content.concat(String(buffer[i], HEX));
+      }
     }
     Serial.println("");
     content.toUpperCase();
@@ -234,7 +236,7 @@ int getFreeBlock() {
 }
 
 void writeBlock(int blockToWrite, byte arrayAddress[]) {
-int largestModulo4Number = blockToWrite / 4 * 4;
+  int largestModulo4Number = blockToWrite / 4 * 4;
   int trailerBlock = largestModulo4Number + 3; //determine trailer block for the sector
   if (blockToWrite > 2 && (blockToWrite + 1) % 4 == 0) {
     Serial.print(blockToWrite);  //block number is a trailer block (modulo 4); quit and send error code 2
