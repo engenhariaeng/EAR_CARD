@@ -76,6 +76,7 @@ void setup() {
 int block = 1;
 ///////////////////////////////////////// Main Loop ///////////////////////////////////
 void loop () {
+  
   do {
     successRead = verifyAccess();            // define o sucesso Leia para 1 quando formos ler do leitor, caso contrário, 0
     digitalWrite(blueLed, LED_ON);    // Visualize o cartão mestre precisa ser definido
@@ -84,7 +85,6 @@ void loop () {
     delay(100);
   }
   while (!successRead);
-  
 }
 
 
@@ -96,52 +96,60 @@ uint8_t verifyAccess() {
   if ( ! mfrc522.PICC_ReadCardSerial()) {
     return 0;
   }
-  String content = "";
-  byte buffer[18];
-  byte len = 18;
-  boolean access = false;
+  boolean finded = false;
+  while (finded == false) {
+    String content = "";
+    byte buffer[18];
+    byte len = 18;
+    boolean access = false;
 
-  status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, block, &key, &(mfrc522.uid));
-  if (status != MFRC522::STATUS_OK) {
-    Serial.println(F("Authentication failed: "));
-    Serial.println(mfrc522.GetStatusCodeName(status));
-  }
-
-  status = mfrc522.MIFARE_Read(block, buffer, &len);
-  if (status != MFRC522::STATUS_OK) {
-    Serial.println(F("Reading failed: "));
-    Serial.println(mfrc522.GetStatusCodeName(status));
-  }
-  
-
-  Serial.print(block);
-  Serial.print(" block is: ");
-  for (uint8_t i = 0; i < 4; i++)
-  {
-    Serial.print(buffer[i] < 0x10 ? " 0" : " ");
-    Serial.print(buffer[i], HEX);
-    content.concat(String(buffer[i] < 0x10 ? " 0" : " "));
-    content.concat(String(buffer[i], HEX));
-  }
-  Serial.println("");
-  content.toUpperCase();
-  delay(300);
-
-  if (content.substring(1) == "3B 1F 89 03" or content.substring(1) == "76 D8 AD 1F") //change here the UID of the card/cards that you want to give access 76 D8 AD 1F
-  {
-    Serial.println("Authorized access");
-    Serial.println();
-    delay(1000);
-    block = 1;
-  } else {
-    if (block + 1 == 63) {
-      Serial.println("Not authorized access");
-      Serial.println();
-      delay(1000);
-    } else {
-      block = block + 1;
+    status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, block, &key, &(mfrc522.uid));
+    if (status != MFRC522::STATUS_OK) {
+      Serial.println(F("Authentication failed: "));
+      Serial.println(mfrc522.GetStatusCodeName(status));
+      finded = true;
     }
 
+    status = mfrc522.MIFARE_Read(block, buffer, &len);
+    if (status != MFRC522::STATUS_OK) {
+      Serial.println(F("Reading failed: "));
+      Serial.println(mfrc522.GetStatusCodeName(status));
+      finded = true;
+    }
+
+
+    Serial.print(block);
+    Serial.print(" block is: ");
+    for (uint8_t i = 0; i < 4; i++)
+    {
+      Serial.print(buffer[i] < 0x10 ? " 0" : " ");
+      Serial.print(buffer[i], HEX);
+      content.concat(String(buffer[i] < 0x10 ? " 0" : " "));
+      content.concat(String(buffer[i], HEX));
+    }
+    Serial.println("");
+    content.toUpperCase();
+    
+
+    if (content.substring(1) == "3B 1F 89 03" or content.substring(1) == "76 D8 AD 1F") //change here the UID of the card/cards that you want to give access 76 D8 AD 1F
+    {
+      Serial.println("Authorized access");
+      Serial.println();
+      
+      block = 1;
+      finded = true;
+    } else {
+      if (block + 1 == 63) {
+        Serial.println("Not authorized access");
+        Serial.println();
+        delay(100);
+        block = 1;
+        finded = true;
+      } else {
+        block = block + 1;
+      }
+
+    }
   }
   mfrc522.PICC_HaltA();//PARA
   mfrc522.PCD_StopCrypto1();
