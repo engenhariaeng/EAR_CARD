@@ -131,7 +131,29 @@ uint8_t verifyAccess() {
     content.toUpperCase();
     
 
-    if (content.substring(1) == "3B 1F 89 03" or content.substring(1) == "76 D8 AD 1F") //change here the UID of the card/cards that you want to give access 76 D8 AD 1F
+    if (content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or
+        content.substring(1) == "71 65 BE 08" or) //change here the UID of the card/cards that you want to give access 76 D8 AD 1F
     {
       Serial.println("Authorized access");
       Serial.println();
@@ -170,7 +192,6 @@ void granted ( uint16_t setDelay) {
   delay(500);          // NIVEL BAIXO POR ALGUNS SEGUNDOS
   digitalWrite(relay, HIGH);    // NIVEL ALTO
   delay(500);            // Mantenha o LED verde aceso por um SEGUNDO
-
 }
 
 ///////////////////////////////////////// Access Denied  ///////////////////////////////////
