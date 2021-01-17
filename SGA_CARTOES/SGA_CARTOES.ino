@@ -71,6 +71,8 @@ void setup() {
   for (byte i = 0; i < 6; i++) {
     key.keyByte[i] = 0xFF;//keyByte is defined in the "MIFARE_Key" 'struct' definition in the .h file of the library
   }
+
+  Serial.println(F("Insira o cartão-sala que deseja dar acesso: "));
 }
 
 byte readblock[18];
@@ -94,9 +96,7 @@ void loop () {
       return;
     }
     else {
-      //showTagCard(roomTag);//apresenta a tag lida atualmente. //Já sabemos fazer isso.
       Serial.println(F("Adding tag to card..."));
-      //addRoomOnCard(roomTag);//Adcionar a tag de uma sala a uma cartão // talvez o parâmetro seja outro.
       Serial.println("-----------------------------");
       Serial.println(F("Added!"));
       firstTime = true;
@@ -106,16 +106,8 @@ void loop () {
   }
   else {
     if (firstTime) {    // Se é a primeira vez que o RFID está lendo um cartão. Endendesse que o mesmo é de uma sala.
+      Serial.println(F("Agora, insira o cartão individual que deseja adcionar a TAG lida: "));
       programMode = true;
-      Serial.println(F("Hello Room Tag - Entered Program Mode"));
-      uint8_t count = EEPROM.read(0);   // Leia o primeiro Byte da EEPROM que
-      Serial.print(F("I have "));     // armazena o número de IDs na EEPROM
-      Serial.print(count);
-      Serial.print(F(" record(s) on EEPROM"));
-      Serial.println("");
-      Serial.println(F("Scan a PICC to ADD or REMOVE to EEPROM"));
-      Serial.println(F("Scan Master Card again to Exit Program Mode"));
-      Serial.println(F("-----------------------------"));
       firstTime = false;
       return;
     }
@@ -158,12 +150,13 @@ uint8_t getID() {
     return 0;
   }
   if (firstTime) {
-    Serial.println(F("Scanned PICC's UID:"));
+    Serial.println(F("A TAG do cartão-sala é: "));
     for ( uint8_t i = 0; i < 4; i++) {  //
       roomTag[i] = mfrc522.uid.uidByte[i];
       Serial.print(roomTag[i], HEX);
     }
     Serial.println("");
+    Serial.println(F("-----------------------------"));
   } else {
     writeBlock(getFreeBlock(), roomTag);
 
@@ -176,6 +169,8 @@ int getFreeBlock() {
   int blockToWrite;
   int readBlock = 1;
   boolean finded = false;
+  Serial.println(F(""));
+  Serial.println(F("Procurando bloco livre..."));
   while (finded == false) {
     String content = "";
     byte buffer[18];
@@ -196,9 +191,9 @@ int getFreeBlock() {
       finded = true;
     }
 
-
+    Serial.print(" Bloco lido: ");
     Serial.print(readBlock);
-    Serial.print(" block is: ");
+    Serial.print(" Conteúdo: ");
     for (uint8_t i = 0; i < 4; i++)
     {
       if (!(readBlock > 2 && (readBlock + 1) % 4 == 0)) {
@@ -208,26 +203,29 @@ int getFreeBlock() {
         content.concat(String(buffer[i], HEX));
       }
     }
-    Serial.println("");
+    Serial.print(" Status: ");
     content.toUpperCase();
 
 
     if (content.substring(1) == "00 00 00 00")
     {
-      Serial.println("I find a free block!");
-      Serial.println();
+      Serial.println("Bloco livre!");
+      Serial.println("");
       blockToWrite = readBlock;
       readBlock = 1;
       finded = true;
     } else {
       if (readBlock + 1 == 63) {
-        Serial.println("Dont find a block to write!");
+        Serial.println();
+        Serial.println("Todos os blocos do cartão estão ocupados.");
         Serial.println();
         delay(100);
         blockToWrite = 0;
         readBlock = 1;
         finded = true;
       } else {
+        Serial.println("Bloco ocupado.");
+        Serial.println("");
         readBlock = readBlock + 1;
       }
     }
@@ -240,11 +238,13 @@ void writeBlock(int blockToWrite, byte arrayAddress[]) {
   int trailerBlock = largestModulo4Number + 3; //determine trailer block for the sector
   if (blockToWrite > 2 && (blockToWrite + 1) % 4 == 0) {
     Serial.print(blockToWrite);  //block number is a trailer block (modulo 4); quit and send error code 2
-    Serial.println(" is a trailer block:");
-    return 2;
+    Serial.println("Bloco não permitido.");
+    return;
   }
+  Serial.println("");
+  Serial.print("TAG da sala será escrita no bloco: ");
   Serial.print(blockToWrite);
-  Serial.println(" is a data block:");
+
 
   /*****************************************authentication of the desired block for access***********************************************************/
   byte status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, trailerBlock, &key, &(mfrc522.uid));
@@ -262,7 +262,8 @@ void writeBlock(int blockToWrite, byte arrayAddress[]) {
     Serial.println(mfrc522.GetStatusCodeName(status));
     return;
   }
-  Serial.println("block was written");
+  Serial.println("");
+  Serial.println("TAG escrita com sucesso, agora o cartão individual tem acesso a sala designada.");
 }
 
 void ShowReaderDetails() {
