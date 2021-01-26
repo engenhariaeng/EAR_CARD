@@ -82,12 +82,15 @@ void loop () {
   if ( findID() ) { // Se não, veja se o cartão está na EEPROM
     Serial.println(F("Welcome, You shall pass"));
     granted(5000);         // MANTENHA O NIVEL AUTO POR 5000 ms
+    asm volatile("jmp 0");
   }
   else {      // Caso contrário, mostre que o ID não era válido
     Serial.println(F("Hello"));
     Serial.println(F("You shall not pass"));
     denied();
+    
   }
+  
 }
 /////////////////////////////////////////  Access Granted    ///////////////////////////////////
 void granted ( uint16_t setDelay) {
@@ -193,7 +196,7 @@ boolean findID() {
     content.toUpperCase();
 
 
-    if (content.substring(1) == "D0 15 70 25" /*SALA 62*/
+    if (content.substring(1) == "D0 20 2C 25" /*SALA 62*/
        ) //change here the UID of the card/cards that you want to give access 76 D8 AD 1F
     {
       Serial.println("Authorized access");
