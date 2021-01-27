@@ -70,7 +70,7 @@ void loop () {
     granted(5000);
   }
   //denied();
-  //asm volatile("jmp 0");
+  
 }
 
 uint8_t WaitingCard() {
@@ -95,15 +95,11 @@ boolean verifyAccess() {
     String content = "";
     MFRC522::StatusCode status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, block, &key, &(mfrc522.uid));
     if (status != MFRC522::STATUS_OK) {
-      Serial.print(F("Erro de autenticação"));
+      Serial.print(F("Erro de autenticação "));
       break;
     }
     
-    status = mfrc522.MIFARE_Read(block, buffer, &len);
-    if (status != MFRC522::STATUS_OK) {
-      Serial.print(F("Erro de leitura"));
-      break;
-    }
+    mfrc522.MIFARE_Read(block, buffer, &len);
     
     Serial.println(F("Este é o bloco lido!"));
     Serial.println(block);
