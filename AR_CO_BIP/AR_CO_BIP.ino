@@ -67,13 +67,10 @@ void loop () {
   Serial.println(F("Verificando.."));
 
   while (verifyAccess() == true) {
-    Serial.println(F("Ligado!"));
-    delay(5000);
+    granted(5000);
   }
-
-  Serial.println(F("Close!"));
-
-  asm volatile("jmp 0");
+  //denied();
+  //asm volatile("jmp 0");
 }
 
 uint8_t WaitingCard() {
@@ -94,18 +91,22 @@ boolean verifyAccess() {
   byte len = 18;
   int block = 1;
 
-  while (finded == false) {
+  while (finded == false) {//ANALISAR ISSO AQUI!
     String content = "";
     MFRC522::StatusCode status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, block, &key, &(mfrc522.uid));
     if (status != MFRC522::STATUS_OK) {
-      return false;
+      Serial.print(F("Erro de autenticação"));
+      break;
     }
-
+    
     status = mfrc522.MIFARE_Read(block, buffer, &len);
     if (status != MFRC522::STATUS_OK) {
-      return false;
+      Serial.print(F("Erro de leitura"));
+      break;
     }
+    
     Serial.println(F("Este é o bloco lido!"));
+    Serial.println(block);
     for (uint8_t i = 0; i < 4; i++)
     {
       Serial.print(buffer[i] < 0x10 ? " 0" : " ");
@@ -116,16 +117,17 @@ boolean verifyAccess() {
     Serial.println("");
     content.toUpperCase();
 
-    finded = isMatch(content);
+    finded = isMatch(content);//here, we get true for find and false while not find
 
     block = block + 1;
 
     if (block >= 63) {
-      finded = true;
+      Serial.print(F("Eu li todos "));
+      break;
     }
   }
-  block = 1;;
-
+  block = 1;
+  
   return finded;
 }
 
