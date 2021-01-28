@@ -1,4 +1,4 @@
-/* PROJETO SGA V1.0 - Dar acesso as salas da instutuição adcionando o código dala ao cartão do funcionário. 
+/* PROJETO SGA V1.0 - Dar acesso as salas da instutuição adcionando o código dala ao cartão do funcionário.
 
   DEFINIÇÃO DAS LIGAÇÕES
    -----------------------------------------------------------------------------------------
@@ -68,54 +68,49 @@ void setup() {
   for (byte i = 0; i < 6; i++) key.keyByte[i] = 0xFF;
   Serial.println(F("Leitura dos Dados :"));
 }
-
-int block = 1;
 ///////////////////////////////////////// Main Loop ///////////////////////////////////
 void loop () {
-  
   do {
-    successRead = verifyAccess();            // define o sucesso Leia para 1 quando formos ler do leitor, caso contrário, 0
-    digitalWrite(blueLed, LED_ON);    // Visualize o cartão mestre precisa ser definido
-    delay(100);
-    digitalWrite(blueLed, LED_OFF);
-    delay(100);
+    successRead = WaitingCard();
+  } while (successRead != 1);
+  Serial.println(F("Verificando.."));
+  
+  while (verifyAccess() == true) {
+    granted(500);
   }
-  while (!successRead);
 }
 
 
-uint8_t verifyAccess() {
-  if ( ! mfrc522.PICC_IsNewCardPresent()) {
+uint8_t WaitingCard() {
+  if ( ! mfrc522.PICC_IsNewCardPresent()) { //Se um novo PICC colocado no leitor RFID continuar
+    return 0;
+  }
+  if ( ! mfrc522.PICC_ReadCardSerial()) {   //Desde que um PICC colocado obtenha o Serial e continue
     return 0;
   }
 
-  if ( ! mfrc522.PICC_ReadCardSerial()) {
-    return 0;
-  }
+  return 1;
+}
+
+
+boolean verifyAccess() {
   boolean finded = false;
+  byte buffer[18];
+  byte len = 18;
+  int block = 1;
+
   while (finded == false) {
     String content = "";
-    byte buffer[18];
-    byte len = 18;
-    boolean access = false;
-
-    status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, block, &key, &(mfrc522.uid));
+    MFRC522::StatusCode status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, block, &key, &(mfrc522.uid));
     if (status != MFRC522::STATUS_OK) {
-      Serial.println(F("Authentication failed: "));
-      Serial.println(mfrc522.GetStatusCodeName(status));
-      finded = true;
+      Serial.print(F("Erro de autenticação "));
+      break;
     }
 
-    status = mfrc522.MIFARE_Read(block, buffer, &len);
-    if (status != MFRC522::STATUS_OK) {
-      Serial.println(F("Reading failed: "));
-      Serial.println(mfrc522.GetStatusCodeName(status));
-      finded = true;
-    }
+    mfrc522.MIFARE_Read(block, buffer, &len);
 
-
-    Serial.print(block);
-    Serial.print(" block is: ");
+    Serial.println(F("Este é o bloco lido!"));
+    Serial.println(block);
     for (uint8_t i = 0; i < 4; i++)
     {
       Serial.print(buffer[i] < 0x10 ? " 0" : " ");
@@ -125,54 +120,26 @@ uint8_t verifyAccess() {
     }
     Serial.println("");
     content.toUpperCase();
-    
 
-    if (content.substring(1) == "D0 15 70 25" /*SALA 62*/ or 
-        content.substring(1) == "C0 FC 5D 25" /*SALA 63*/ or 
-        content.substring(1) == "C0 A7 E7 25" /*SALA 64*/ or 
-        content.substring(1) == "D0 48 C6 25" /*SALA 65*/ or
-        content.substring(1) == "A0 A5 43 25" /*SALA 66*/ or
-        content.substring(1) == "D0 80 A4 25" /*SALA 67*/ or
-        content.substring(1) == "86 66 2E 1F" /*SALA 68*/ or
-        content.substring(1) == "86 98 5F 1F" /*SALA 69*/ or
-        content.substring(1) == "86 05 56 1F" /*SALA 70*/ or
-        content.substring(1) == "D0 CE 88 25" /*SALA 71*/ or
-        content.substring(1) == "71 65 BE 08" /*SALA 72*/ or
-        content.substring(1) == "D0 84 33 25" /*SALA 73*/ or
-        content.substring(1) == "B0 61 09 25" /*SALA 74*/ or
-        content.substring(1) == "76 BA 6F 1F" /*SALA 75*/ or
-        content.substring(1) == "86 0A EB 1F" /*SALA 76*/ or
-        content.substring(1) == "B0 96 DC 25" /*SALA 80*/ or
-        content.substring(1) == "D0 98 47 25" /*SALA 81*/ or
-        content.substring(1) == "86 7C 78 1F" /*SALA 82*/ or
-        content.substring(1) == "64 98 54 FF" /*SALA 83*/ or
-        content.substring(1) == "86 2A 86 1F" /*SALA 84*/ or
-        content.substring(1) == "B0 1C 8B 25" /*SALA 85*/ or
-        content.substring(1) == "71 12 C4 08" /*SALA 86*/or
-        content.substring(1) == "86 9D E8 1F" /*SALA 87*/ or
-        content.substring(1) == "D0 20 2C 25" /*SALA 88*/ or
-        content.substring(1) == "D0 86 99 25" /*SALA 89*/) //change here the UID of the card/cards that you want to give access 76 D8 AD 1F
-    {
-      Serial.println("Authorized access");     
-      Serial.println();
-      finded = true;
-      block = 1; 
-      granted(500);
-    } else {
-      if (block + 1 == 63) {
-        Serial.println("Not authorized access");
-        Serial.println();
-        delay(100);
-        finded = true;
-        block = 1;       
-        denied();
-      } else {
-        block = block + 1;
-      }
+    finded = isMatch(content);//here, we get true for find and false while not find
+
+    block = block + 1;
+
+    if (block >= 63) {
+      Serial.print(F("Eu li todos "));
+      break;
     }
   }
-  mfrc522.PICC_HaltA();
-  mfrc522.PCD_StopCrypto1();
+  block = 1;
+
+  return finded;
+}
+
+boolean isMatch(String readTag) {
+  if (readTag.substring(1) == "A0 A5 43 25" /*71*/) {
+    return true;
+  }
+  return false;
 }
 
 /////////////////////////////////////////  Access Granted    ///////////////////////////////////
