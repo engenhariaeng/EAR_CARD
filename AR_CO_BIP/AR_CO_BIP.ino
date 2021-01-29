@@ -70,7 +70,7 @@ void loop () {
     granted(5000);
   }
   //denied();
-  
+
 }
 
 uint8_t WaitingCard() {
@@ -98,9 +98,9 @@ boolean verifyAccess() {
       Serial.print(F("Erro de autenticação "));
       break;
     }
-    
+
     mfrc522.MIFARE_Read(block, buffer, &len);
-    
+
     Serial.println(F("Este é o bloco lido!"));
     Serial.println(block);
     for (uint8_t i = 0; i < 4; i++)
@@ -117,13 +117,9 @@ boolean verifyAccess() {
 
     block = block + 1;
 
-    if (block >= 63) {
-      Serial.print(F("Eu li todos "));
-      break;
-    }
   }
   block = 1;
-  
+
   return finded;
 }
 

@@ -121,14 +121,10 @@ boolean verifyAccess() {
     Serial.println("");
     content.toUpperCase();
 
-    finded = isMatch(content);//here, we get true for find and false while not find
+    finded = isMatch(content);
 
     block = block + 1;
 
-    if (block >= 63) {
-      Serial.print(F("Eu li todos "));
-      break;
-    }
   }
   block = 1;
 
@@ -136,7 +132,9 @@ boolean verifyAccess() {
 }
 
 boolean isMatch(String readTag) {
-  if (readTag.substring(1) == "A0 A5 43 25" /*71*/) {
+  if (readTag.substring(1) == "86 05 56 1F" /*70*/ or
+      readTag.substring(1) == "76 D3 79 1F" /*HS*/ or
+      readTag.substring(1) == "76 D7 2C 1F" /*GERAL*/) {
     return true;
   }
   return false;
