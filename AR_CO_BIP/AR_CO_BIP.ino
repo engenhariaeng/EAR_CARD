@@ -72,7 +72,7 @@ void loop () {
     granted(5000);
   }
   if (moreTime == true) {
-    for (int i = 0; i < 2; i++) {//O TEMPO TEM QUE SER 10 MINUTOS
+    for (int i = 0; i < 10; i++) {//O TEMPO TEM QUE SER 10 MINUTOS
       Serial.print("More time is... ");
       Serial.println(i);
       granted(60000);
@@ -134,6 +134,7 @@ boolean verifyAccess() {
 boolean isMatch(String readTag) {
   if (readTag.substring(1) == "86 05 56 1F" /*70*/ or
       readTag.substring(1) == "76 D3 79 1F" /*HS*/ or
+      readTag.substring(1) == "86 99 D2 1F" /*Ar GERAL*/ or
       readTag.substring(1) == "76 D7 2C 1F" /*GERAL*/
      ) {
     return true;

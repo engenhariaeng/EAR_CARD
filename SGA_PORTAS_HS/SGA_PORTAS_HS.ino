@@ -134,6 +134,7 @@ boolean verifyAccess() {
 boolean isMatch(String readTag) {
   if (readTag.substring(1) == "86 05 56 1F" /*70*/ or
       readTag.substring(1) == "76 D3 79 1F" /*HS*/ or
+      readTag.substring(1) == "D0 58 A1 25" /*PORTA-GERAL*/ or
       readTag.substring(1) == "76 D7 2C 1F" /*GERAL*/) {
     return true;
   }
