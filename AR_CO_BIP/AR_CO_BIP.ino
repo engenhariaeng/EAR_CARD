@@ -54,23 +54,31 @@ void setup() {
   SPI.begin();
   mfrc522.PCD_Init();
 
-  Serial.println(F("SGA - Ar Condicionado 2.1"));
+  Serial.println(F("SGA - Ar Condicionado 2.1.1"));
   Serial.println(F("Esperando um cartão para ser lido..."));
 
   for (byte i = 0; i < 6; i++) key.keyByte[i] = 0xFF;
 }
 
 void loop () {
+  boolean moreTime = false;
   do {
     successRead = WaitingCard();
   } while (successRead != 1);
   Serial.println(F("Verificando.."));
 
   while (verifyAccess() == true) {
+    moreTime = true;
     granted(5000);
   }
-  //denied();
-
+  if (moreTime == true) {
+    for (int i = 0; i < 2; i++) {//O TEMPO TEM QUE SER 10 MINUTOS
+      Serial.print("More time is... ");
+      Serial.println(i);
+      granted(60000);
+    }
+  }
+  Serial.println("Desligado!");
 }
 
 uint8_t WaitingCard() {
@@ -91,7 +99,7 @@ boolean verifyAccess() {
   byte len = 18;
   int block = 1;
 
-  while (finded == false) {//ANALISAR ISSO AQUI!
+  while (finded == false) {
     String content = "";
     MFRC522::StatusCode status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, block, &key, &(mfrc522.uid));
     if (status != MFRC522::STATUS_OK) {
