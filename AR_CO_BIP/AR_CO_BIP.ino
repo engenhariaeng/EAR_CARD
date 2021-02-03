@@ -24,7 +24,6 @@
 #define LED_ON HIGH
 #define LED_OFF LOW
 #endif
-const int buzzer = A3;
 constexpr uint8_t redLed = 7;   // DEFINIR PINOS DOS LEDS
 constexpr uint8_t greenLed = 6;
 constexpr uint8_t blueLed = 5;
@@ -72,11 +71,7 @@ void loop () {
     granted(5000);
   }
   if (moreTime == true) {
-    for (int i = 0; i < 10; i++) {//O TEMPO TEM QUE SER 10 MINUTOS
-      Serial.print("More time is... ");
-      Serial.println(i);
-      granted(60000);
-    }
+    asm volatile("jmp 0");
   }
   Serial.println("Desligado!");
 }
@@ -132,7 +127,7 @@ boolean verifyAccess() {
 }
 
 boolean isMatch(String readTag) {
-  if (readTag.substring(1) == "86 05 56 1F" /*70*/ or
+  if (readTag.substring(1) == "86 98 5F 1F" /*72*/ or
       readTag.substring(1) == "76 D3 79 1F" /*HS*/ or
       readTag.substring(1) == "86 99 D2 1F" /*Ar GERAL*/ or
       readTag.substring(1) == "76 D7 2C 1F" /*GERAL*/
@@ -152,108 +147,4 @@ void granted ( uint16_t setDelay) {
   digitalWrite(relay, LOW);    // NIVEL BAIXO
   delay(5);            // Mantenha o LED verde aceso por um MILESIMO
 
-}
-
-///////////////////////////////////////// Access Denied  ///////////////////////////////////
-void denied() {
-  digitalWrite(greenLed, LED_OFF);  // Certifique-se de que o LED verde esteja apagado
-  digitalWrite(blueLed, LED_OFF);   // MCertifique-se de que o LED AZUL esteja apagado
-  digitalWrite(redLed, LED_ON);   // Ligue o LED vermelho
-  delay(5);
-}
-
-///////////////////////////////////////// Cycle Leds (Program Mode) ///////////////////////////////////
-void cycleLeds() {
-  tone(buzzer, 1500);
-  delay(100);
-  noTone(buzzer);
-  tone(buzzer, 2500);
-  delay(100);
-  noTone(buzzer);
-  tone(buzzer, 3500);
-  delay(100);
-  noTone(buzzer);
-  tone(buzzer, 4500);
-  delay(100);
-  noTone(buzzer);
-  delay(1000);
-}
-
-//////////////////////////////////////// Normal Mode Led  ///////////////////////////////////
-void normalModeOn () {
-  digitalWrite(blueLed, LED_ON);
-  digitalWrite(redLed, LED_OFF);
-  digitalWrite(greenLed, LED_OFF);
-  digitalWrite(relay, LOW);
-}
-
-///////////////////////////////////////// Write Success to EEPROM   ///////////////////////////////////
-// Pisca o LED verde 3 vezes para indicar uma gravação bem-sucedida na EEPROM
-void successWrite() {
-  digitalWrite(blueLed, LED_OFF);
-  digitalWrite(redLed, LED_OFF);
-  digitalWrite(greenLed, LED_OFF);
-  delay(200);
-  digitalWrite(greenLed, LED_ON);
-  delay(200);
-  digitalWrite(greenLed, LED_OFF);
-  delay(200);
-  digitalWrite(greenLed, LED_ON);
-  delay(200);
-  digitalWrite(greenLed, LED_OFF);
-  delay(200);
-  digitalWrite(greenLed, LED_ON);
-  delay(200);
-}
-
-///////////////////////////////////////// Write Failed to EEPROM   ///////////////////////////////////
-//Pisca o LED vermelho 3 vezes para indicar uma falha na gravação na EEPROM
-void failedWrite() {
-  digitalWrite(blueLed, LED_OFF);
-  digitalWrite(redLed, LED_OFF);
-  digitalWrite(greenLed, LED_OFF);
-  delay(200);
-  digitalWrite(redLed, LED_ON);
-  delay(200);
-  digitalWrite(redLed, LED_OFF);
-  delay(200);
-  digitalWrite(redLed, LED_ON);
-  delay(200);
-  digitalWrite(redLed, LED_OFF);
-  delay(200);
-  digitalWrite(redLed, LED_ON);
-  delay(200);
-}
-
-///////////////////////////////////////// Success Remove UID From EEPROM  ///////////////////////////////////
-// Pisca o LED azul 3 vezes para indicar um sucesso excluir para EEPROM
-void successDelete() {
-  digitalWrite(blueLed, LED_OFF);
-  digitalWrite(redLed, LED_OFF);
-  digitalWrite(greenLed, LED_OFF);
-  delay(200);
-  digitalWrite(blueLed, LED_ON);
-  delay(200);
-  digitalWrite(blueLed, LED_OFF);
-  delay(200);
-  digitalWrite(blueLed, LED_ON);
-  delay(200);
-  digitalWrite(blueLed, LED_OFF);
-  delay(200);
-  digitalWrite(blueLed, LED_ON);
-  delay(200);
-}
-
-////////////////////// Check readCard IF is masterCard   ///////////////////////////////////
-
-bool monitorWipeButton(uint32_t interval) {
-  uint32_t now = (uint32_t)millis();
-  while ((uint32_t)millis() - now < interval)  {
-    // check on every half a second
-    if (((uint32_t)millis() % 500) == 0) {
-      if (digitalRead(wipeB) != LOW)
-        return false;
-    }
-  }
-  return true;
 }
