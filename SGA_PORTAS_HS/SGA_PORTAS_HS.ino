@@ -33,9 +33,9 @@ constexpr uint8_t blueLed = 5;
 constexpr uint8_t relay = 3;     // DEFINIR PINO DO RELAY
 constexpr uint8_t wipeB = 4;     // DEFINIR PINO DO BOTÃO RESSET
 
-       // inicializar correspondência de cartão com falso
-  // inicializa o modo de programação para falso
-
+boolean match = false;          // inicializar correspondência de cartão com falso
+boolean programMode = false;  // inicializa o modo de programação para falso
+boolean replaceMaster = false;
 
 uint8_t successRead;    // Inteiro variável para manter se tivermos uma leitura bem-sucedida do Reader
 
@@ -70,24 +70,14 @@ void setup() {
 }
 ///////////////////////////////////////// Main Loop ///////////////////////////////////
 void loop () {
-  boolean inside = false;
   do {
     successRead = WaitingCard();
   } while (successRead != 1);
   Serial.println(F("Verificando.."));
-
+  
   while (verifyAccess() == true) {
-    inside = true;
     granted(500);
   }
-
-  if (inside == true) {
-    asm volatile("jmp 0");
-  }
-
-  
-
-
 }
 
 
@@ -142,9 +132,8 @@ boolean verifyAccess() {
 }
 
 boolean isMatch(String readTag) {
-  if (readTag.substring(1) == "71 65 BE 08" /*72*/ or
+  if (readTag.substring(1) == "86 05 56 1F" /*70*/ or
       readTag.substring(1) == "76 D3 79 1F" /*HS*/ or
-      readTag.substring(1) == "86 99 D2 1F" /*Ar GERAL*/ or
       readTag.substring(1) == "76 D7 2C 1F" /*GERAL*/) {
     return true;
   }
@@ -166,4 +155,135 @@ void granted ( uint16_t setDelay) {
   delay(500);          // NIVEL BAIXO POR ALGUNS SEGUNDOS
   digitalWrite(relay, HIGH);    // NIVEL ALTO
   delay(500);            // Mantenha o LED verde aceso por um SEGUNDO
+}
+
+///////////////////////////////////////// Access Denied  ///////////////////////////////////
+void denied() {
+  digitalWrite(greenLed, LED_OFF);  // Certifique-se de que o LED verde esteja apagado
+  digitalWrite(blueLed, LED_OFF);   // MCertifique-se de que o LED AZUL esteja apagado
+  digitalWrite(redLed, LED_ON);   // Ligue o LED vermelho
+  delay(1000);
+}
+
+void ShowReaderDetails() {
+  // Obtenha a versão do software MFRC522
+  byte v = mfrc522.PCD_ReadRegister(mfrc522.VersionReg);
+  Serial.print(F("MFRC522 Software Version: 0x"));
+  Serial.print(v, HEX);
+  if (v == 0x91)
+    Serial.print(F(" = v1.0"));
+  else if (v == 0x92)
+    Serial.print(F(" = v2.0"));
+  else
+    Serial.print(F(" (unknown),probably a chinese clone?"));
+  Serial.println("");
+  // Quando 0x00 ou 0xFF é retornado, a comunicação provavelmente falhou
+  if ((v == 0x00) || (v == 0xFF)) {
+    Serial.println(F("WARNING: Communication failure, is the MFRC522 properly connected?"));
+    Serial.println(F("SYSTEM HALTED: Check connections."));
+    // Visualize o sistema é interrompido
+    digitalWrite(greenLed, LED_OFF);  //  Certifique-se de que o LED verde esteja apagado
+    digitalWrite(blueLed, LED_OFF);   //  Certifique-se de que o LED AZUL esteja apagado
+    digitalWrite(redLed, LED_ON);   // LIGAR LED VERMELHO
+    while (true); // não vá mais longe
+  }
+}
+
+///////////////////////////////////////// Cycle Leds (Program Mode) ///////////////////////////////////
+void cycleLeds() {
+  digitalWrite(redLed, LED_OFF);
+  digitalWrite(greenLed, LED_ON);
+  digitalWrite(blueLed, LED_OFF);
+  delay(200);
+  digitalWrite(redLed, LED_OFF);
+  digitalWrite(greenLed, LED_OFF);
+  digitalWrite(blueLed, LED_ON);
+  delay(200);
+  digitalWrite(redLed, LED_ON);
+  digitalWrite(greenLed, LED_OFF);
+  digitalWrite(blueLed, LED_OFF);
+  delay(200);
+  tone(buzzer, 4500);
+  delay(100);
+  noTone(buzzer);
+  tone(buzzer, 4500);
+  delay(100);
+  noTone(buzzer);
+}
+
+//////////////////////////////////////// Normal Mode Led  ///////////////////////////////////
+void normalModeOn () {
+  digitalWrite(blueLed, LED_ON);
+  digitalWrite(redLed, LED_OFF);
+  digitalWrite(greenLed, LED_OFF);
+  digitalWrite(relay, HIGH);
+}
+
+
+// Pisca o LED verde 3 vezes para indicar uma gravação bem-sucedida na EEPROM
+void successWrite() {
+  digitalWrite(blueLed, LED_OFF);
+  digitalWrite(redLed, LED_OFF);
+  digitalWrite(greenLed, LED_OFF);
+  delay(200);
+  digitalWrite(greenLed, LED_ON);
+  delay(200);
+  digitalWrite(greenLed, LED_OFF);
+  delay(200);
+  digitalWrite(greenLed, LED_ON);
+  delay(200);
+  digitalWrite(greenLed, LED_OFF);
+  delay(200);
+  digitalWrite(greenLed, LED_ON);
+  delay(200);
+}
+
+///////////////////////////////////////// Write Failed to EEPROM   ///////////////////////////////////
+//Pisca o LED vermelho 3 vezes para indicar uma falha na gravação na EEPROM
+void failedWrite() {
+  digitalWrite(blueLed, LED_OFF);
+  digitalWrite(redLed, LED_OFF);
+  digitalWrite(greenLed, LED_OFF);
+  delay(200);
+  digitalWrite(redLed, LED_ON);
+  delay(200);
+  digitalWrite(redLed, LED_OFF);
+  delay(200);
+  digitalWrite(redLed, LED_ON);
+  delay(200);
+  digitalWrite(redLed, LED_OFF);
+  delay(200);
+  digitalWrite(redLed, LED_ON);
+  delay(200);
+}
+
+///////////////////////////////////////// Success Remove UID From EEPROM  ///////////////////////////////////
+// Pisca o LED azul 3 vezes para indicar um sucesso excluir para EEPROM
+void successDelete() {
+  digitalWrite(blueLed, LED_OFF);
+  digitalWrite(redLed, LED_OFF);
+  digitalWrite(greenLed, LED_OFF);
+  delay(200);
+  digitalWrite(blueLed, LED_ON);
+  delay(200);
+  digitalWrite(blueLed, LED_OFF);
+  delay(200);
+  digitalWrite(blueLed, LED_ON);
+  delay(200);
+  digitalWrite(blueLed, LED_OFF);
+  delay(200);
+  digitalWrite(blueLed, LED_ON);
+  delay(200);
+}
+
+bool monitorWipeButton(uint32_t interval) {
+  uint32_t now = (uint32_t)millis();
+  while ((uint32_t)millis() - now < interval)  {
+    // check on every half a second
+    if (((uint32_t)millis() % 500) == 0) {
+      if (digitalRead(wipeB) != LOW)
+        return false;
+    }
+  }
+  return true;
 }
