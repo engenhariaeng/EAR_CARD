@@ -177,7 +177,7 @@ int getFreeBlock() {
     byte len = 18;
     boolean access = false;
 
-    byte status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, readBlock, &key, &(mfrc522.uid));
+    MFRC522::StatusCode status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, readBlock, &key, &(mfrc522.uid));
     if (status != MFRC522::STATUS_OK) {
       Serial.println(F("Authentication failed: "));
       Serial.println(mfrc522.GetStatusCodeName(status));
@@ -247,7 +247,7 @@ void writeBlock(int blockToWrite, byte arrayAddress[]) {
 
 
   /*****************************************authentication of the desired block for access***********************************************************/
-  byte status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, trailerBlock, &key, &(mfrc522.uid));
+  MFRC522::StatusCode status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, trailerBlock, &key, &(mfrc522.uid));
 
   if (status != MFRC522::STATUS_OK) {
     Serial.print("PCD_Authenticate() failed: ");
