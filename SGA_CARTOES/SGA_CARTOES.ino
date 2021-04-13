@@ -1,16 +1,4 @@
 /* PROJETO ESCOLA V3.0
-
-  DEFINIÇÃO DAS LIGAÇÕES
-   -----------------------------------------------------------------------------------------
-               MFRC522      Arduino       Arduino   Arduino    Arduino          Arduino
-               Reader/PCD   Uno/101       Mega      Nano v3    Leonardo/Micro   Pro Micro
-   Signal      Pin          Pin           Pin       Pin        Pin              Pin
-   -----------------------------------------------------------------------------------------
-   RST/Reset   RST          9             5         D9         RESET/ICSP-5     RST
-   SPI SS      SDA(SS)      10            53        D10        10               10
-   SPI MOSI    MOSI         11 / ICSP-4   51        D11        ICSP-4           16
-   SPI MISO    MISO         12 / ICSP-1   50        D12        ICSP-1           14
-   SPI SCK     SCK          13 / ICSP-3   52        D13        ICSP-3           15
 */
 
 #include <EEPROM.h>     // Vamos ler e escrever os UIDs do PICC de / para a EEPROM
@@ -71,7 +59,10 @@ void setup() {
   for (byte i = 0; i < 6; i++) {
     key.keyByte[i] = 0xFF;//keyByte is defined in the "MIFARE_Key" 'struct' definition in the .h file of the library
   }
-
+  int arr[6] = {4, 1, 8, 2, 9, 3};
+  int len = sizeof(arr) / sizeof(arr[0]);
+  Serial.println("Lengt:");
+  Serial.println(len);
   Serial.println(F("Insira o cartão-sala que deseja dar acesso: "));
 }
 
@@ -244,8 +235,6 @@ void writeBlock(int blockToWrite, byte arrayAddress[]) {
   Serial.println("");
   Serial.print("TAG da sala será escrita no bloco: ");
   Serial.print(blockToWrite);
-
-
   /*****************************************authentication of the desired block for access***********************************************************/
   MFRC522::StatusCode status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, trailerBlock, &key, &(mfrc522.uid));
 
