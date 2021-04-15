@@ -64,8 +64,9 @@ String actionTagAdd = "9C B6 B4 C3";
 byte cleanTag[4] = {0, 0, 0, 0};
 
 byte roomTag[4];
+byte userTag[4];
 
-
+boolean waitUserTag = false;
 boolean gettingTags = true;
 
 void loop() {
@@ -73,26 +74,28 @@ void loop() {
     successRead = WaitingCard();
   } while (successRead != 1);
   if (isActionMode()) {
-    if (isRoomTag() == true) {
-      delay(800);
+    if (waitUserTag) {
+      if (currentAction == "ADD") {
+        Serial.println("Inserindo tag...");
+      } else {
+        Serial.println("Removendo tag...");
+      }
+      resetProcess();
+    } else if (isRoomTag()) {
       Serial.println("");
-      Serial.print("Ok, já estou pronto para realizar a ação ");
+      Serial.print("Agora, insira uma tag de ação para iniciar a ação ");
       Serial.println(currentAction);
-      Serial.println("Para que a mesma seja realizada, insira qualquer cartão de ação.");
       Serial.println("Caso queira trocar a sala, basta inserir outra.");
       delay(1000);
     } else {
       if (isCancel()) {
         Serial.println("Ação cancelada.");
+        resetProcess();
       } else {
-        if (currentAction == "ADD") {
-          Serial.println("Adcionada uma tag no cartão.");
-        } else {
-          Serial.println("Removida uma tag do cartão.");
-        }
+        Serial.println("Agora, insira o cartão individual para realizar a ação.");
+        delay(1000);
+        waitUserTag = true;
       }
-      resetProcess();
-
     }
   } else {
     if (verifyAction()) {
@@ -188,12 +191,36 @@ void resetProcess() {
   gettingTags = true;
   currentAction = "";
   currentStringTag = "";
+  waitUserTag = false;
 
   for (int i = 0; i < 4; i++) {
     currentByteTag[i] = 0;
     roomTag[i] = 0;
+    userTag[i] = 0;
   }
   delay(1000);
   Serial.println("");
   Serial.println(F("Insira a tag-ação que deseja executar"));
 }
+/*
+  boolean isUserTag() {
+  saveCurrentUid();
+  boolean isUserTag = false;
+  if (verifyAction() == true) {
+    gettingTags = false;
+  } else {
+    for (int i = 0; i < 4; i++) {
+      if (currentByteTag[i] != roomTag[i]) {
+        isUserTag = true;
+      }
+    }
+  }
+
+  if (isUserTag) {
+    for (int i = 0; i < 4; i++) {
+      userTag[i] = currentByteTag[i];
+    }
+  }
+  return isUserTag;
+  }
+*/
