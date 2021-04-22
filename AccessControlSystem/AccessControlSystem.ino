@@ -77,8 +77,10 @@ void loop() {
     if (waitUserTag) {
       if (currentAction == "ADD") {
         Serial.println("Inserindo tag...");
+        delay(2000);
       } else {
         Serial.println("Removendo tag...");
+        delay(2000);
       }
       resetProcess();
     } else if (isRoomTag()) {
